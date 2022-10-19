@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>스케쥴 체커</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" type="text/css" href="./css/reset.css">
+    <link rel="stylesheet" type="text/css" href="./css/commons.css">
+    <style>
+        .schedule-item {
+            font-size: 25px;
+            letter-spacing: 0.025em;
+        }
+        .notice {
+            list-style: none;
+            line-height: 1.35;
+            font-size: 20px;
+            color:blue;
+        }
+        .progressbar {
+            width:100%;
+            height:7px;
+        }
+        .progressbar > .percent {
+            background: rgb(131,58,180);
+            background: linear-gradient(90deg, rgba(131,58,180,1) 0%, rgba(253,29,29,1) 50%, rgba(252,176,69,1) 100%); 
+            height:100%;
+        }
+    </style>
+
+    <!-- jquery를 사용하기 위하여 라이브러리 js 파일을 불러온다-->
+    <script src="https://code.jquery.com/jquery-3.6.1.js"></script>
+    <script type="text/javascript">
+        
+    </script>
+
+</head>
+<body>
+
+    <!-- HTML 화면 -->
+    <div class="container-700 mt-50 mb-50" id="app">
+        <div class="row center">
+            <h1>{{title}}</h1>
+        </div>
+
+        <div class="row center">
+            <h2>{{nowFormat}}</h2>
+        </div>
+
+        <div class="row center">
+            {{period.begin}} ~ {{period.end}} ({{period.actual}} / {{period.total}}일, {{datePercent}}%)
+        </div>
+
+        <div class="row progressbar">
+            <div class="percent" :style="{width:datePercent+'%'}"></div>
+        </div>
+
+        <div class="row schedule-item mb-20 float-container" v-for="(s, i) in schedules" :key="i" :style="getStyle(s)">
+            <input type="checkbox" class="me-10 float-left" v-model="s.clear">
+            <span class="float-left">{{s.name}}</span>
+            <span class="float-left ms-10">({{s.time}})</span>
+            <span class="float-right">{{calculate(s.time)}}</span>
+        </div>
+
+        <div class="row">
+            <ul class="notice">
+                <li>라운지 이용 자유롭게 하시면 되고 정리 잘 해주세요</li>
+                <li>쉬는시간은 별도의 공지를 하지 않으니 가급적 준수해주시기 바랍니다</li>
+                <li>프로젝트 관련된 질문은 언제든지 환영합니다</li>
+                <li>Github 관련 이슈는 빠른 질문으로 해결하시기 바랍니다</li>
+            </ul>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/moment@2.29.4/moment.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/locale/ko.min.js"></script>
+    <script src="./LunarSolarConverter.js"></script>
+    <script src="https://unpkg.com/vue@next"></script>
+    <script>
+        Vue.createApp({
+            data(){
+                return {
+                    title:"세미 프로젝트",
+                    period:{
+                        begin:"2022-10-19",
+                        end:"2022-11-01",
+                        total:0,
+                        actual:0,
+                    },
+                    schedules:[
+                        {name:"오전 업무 시작", time:"09:30", clear:false},
+                        {name:"업무 목표 작성", time:"10:00", clear:false},
+                        {name:"점심 시간", time:"12:12", clear:false},
+                        {name:"오후 업무 시작", time:"13:30", clear:false},
+                        {name:"업무 마감 작성", time:"18:00", clear:false},
+                        {name:"근무 종료", time:"18:20", clear:false},
+                    ],
+                    now:moment(),
+                    styles:{
+                        clear:{"color":"gray"},
+                        almost:{"color":"red"},
+                        remain:{"color":"black"}
+                    },
+                    solarHolidays : [
+                        {date:"01-01", name:"신정"},
+                        {date:"03-01", name:"삼일절", replace:true},
+                        {date:"05-05", name:"어린이날", replace:true},
+                        {date:"06-06", name:"현충일"},
+                        {date:"08-15", name:"광복절", replace:true},
+                        {date:"10-03", name:"개천절", replace:true},
+                        {date:"10-09", name:"한글날", replace:true},
+                        {date:"12-25", name:"크리스마스"},
+                    ],
+                    lunarHolidays : [
+                        {date:"12-31", name:"구정", replace:true},
+                        {date:"01-01", name:"구정", replace:true},
+                        {date:"01-02", name:"구정", replace:true},
+                        {date:"04-08", name:"석가탄신일"},
+                        {date:"08-14", name:"추석", replace:true},
+                        {date:"08-15", name:"추석", replace:true},
+                        {date:"08-16", name:"추석", replace:true},
+                    ],                
+                    converter:new LunarSolarConverter(),
+                };
+            },
+            computed:{
+                nowFormat(){
+                    return this.now.format("YYYY-MM-DD dddd HH:mm:ss");
+                },
+                datePercent(){
+                    if(this.period.total == 0) return 0.0;
+                    const percent = this.period.actual / this.period.total * 100;
+                    return percent.toFixed(1);
+                }
+            },
+            methods:{
+                getStyle(schedule){
+                    if(schedule.clear){
+                        return this.styles.clear;
+                    }
+                    
+                    const timeObj = moment(schedule.time, 'HH:mm');
+                    if(timeObj.diff(this.now, 'hours') == 0) {
+                        return this.styles.almost;
+                    }
+                    else {
+                        return this.styles.remain;
+                    }
+                },
+                calculate(time){
+                    const timeObj = moment(time, 'HH:mm');
+                    if(timeObj.isBefore(this.now)){
+                        return "완료되었습니다";
+                    }
+                    else {
+                        return moment.utc(timeObj.diff(this.now)).format('H시간 m분 s초 남았습니다');
+                    }
+                },
+                calculateWorkingDay(){
+                    this.period.total = 0;
+                    const begin = moment(this.period.begin, 'YYYY-MM-DD');
+                    const end = moment(this.period.end, 'YYYY-MM-DD');
+
+                    var diff = end.diff(begin, 'days') + 1;
+                    var total = 0;
+                    var actual = 0;
+                    var d = begin.startOf('day');
+
+                    for(var i=0; i < diff; i++){
+                        //console.log(d.format('YYYY-MM-DD'), d.days(), d.days() === 0, d.days() === 6 );
+                        var holiday = false;
+                        //주말 검사
+                        if(d.days() == 0 || d.days() == 6){
+                            holiday = true;
+                        }
+                        else {
+                            //양력 휴일 검사
+                            if(this.solarHolidays.filter(t=>t.date === d.format('MM-DD')).length > 0) {
+                                holiday = true;
+                            }
+                            else {
+                                //음력 휴일 검사
+                                var solar = new Solar();
+                                solar.solarYear = d.year();
+                                solar.solarMonth = d.month()+1;
+                                solar.solarDay = d.date(); 
+                                var lunar = this.converter.SolarToLunar(solar);
+                                var lunarText = moment({year:lunar.lunarYear, month:lunar.lunarMonth-1, day:lunar.lunarDay}).format('MM-DD');
+                                if(this.lunarHolidays.filter(t=>t.date === lunarText).length > 0){
+                                    holiday = true;
+                                }
+                            }
+                        }
+
+                        if(holiday == false) {
+                            if(this.now.isAfter(d)){
+                                actual++;
+                            }
+                            total ++;
+                        }
+                        
+                        d.add(1, 'day');
+                    }
+
+                    this.period.total = total;
+                    this.period.actual = actual;
+                }
+            },
+            created(){
+                this.now = moment();
+                this.calculateWorkingDay();
+
+                setInterval(()=>{
+                    this.now = moment();
+
+                    this.schedules.forEach((s)=>{
+                        const timeObj = moment(s.time, 'HH:mm');
+                        s.clear = timeObj.isBefore(this.now);
+                    });
+                }, 1000);
+            },
+        }).mount("#app");
+    </script>
+    
+</body>
+</html>
