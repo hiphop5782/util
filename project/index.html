@@ -139,6 +139,13 @@
                     return percent.toFixed(1);
                 }
             },
+            watch:{
+                now(a, b){
+                    if(!a.isSame(b, 'day')) {
+                        calculateWorkingDay();
+                    }
+                },
+            },
             methods:{
                 getStyle(schedule){
                     if(schedule.clear){
