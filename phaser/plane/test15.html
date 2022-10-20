@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+    </style>
+    <title>기체 변경</title>
+</head>
+<body>
+    
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.15.1/dist/phaser-arcade-physics.min.js"></script>
+    <script type="text/babel">
+        class ChangePlane extends Phaser.Scene {
+
+            constructor(){
+                super();
+                this.score = 0;
+                this.start = false;
+                this.life = 3;
+                this.speed = 5;
+                this.frameCount = 0;
+                this.enemyMaxHp = 4000;
+                this.enemyCurrentHp = this.enemyMaxHp;
+                this.baseAttackScore = 10;
+                this.advanceAttackScore = 20;
+                this.play = false;
+                this.playerScale = 0.75;
+            }
+            preload(){
+                this.load.image('player-default', 'assets/player2/default.png');
+                this.load.image('player-base-attack', 'assets/player2/base-attack.png');
+                this.load.image('player-advance-attack', 'assets/player2/advance-attack.png');
+                this.load.image('player-damaged', 'assets/player2/damaged.png');
+                this.load.image('enemy-default', 'assets/enemy/default.png');
+                this.load.image('enemy-damaged', 'assets/enemy/damaged.png');
+                this.load.image('player-basic-missile', 'assets/missile/orb-green.png');
+                this.load.image('player-advance-missile', 'assets/missile/orb-red.png');
+                this.load.spritesheet('enemy-missile', 'assets/missile/balls.png', {frameWidth:17, frameHeight:17});
+            }
+            create(){
+                //점수판
+                this.scoreText = this.add.text(75, 75, 'SCORE : '+this.score, {fontSize:'30px', fill:'#FFF'}).setDepth(99999);
+
+                //생명
+                this.lifeText = this.add.text(this.physics.world.bounds.width - 225, 75, 'LIFE : '+this.life, {fontSize:'30px', fill:'#FFF'}).setDepth(99999);
+
+                //플레이어
+                this.player = this.physics.add.image(config.width/2, config.height - 125, 'player-default').setScale(this.playerScale).setDepth(2);
+                this.player.setCollideWorldBounds(true);//지도 안에 가두기
+                
+                //플레이어 이동키
+                this.key = {
+                    up : this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.UP),
+                    down : this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.DOWN),
+                    left : this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.LEFT),
+                    right : this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.RIGHT),
+                };
+
+                //적
+                this.enemy = this.physics.add.image(config.width/2, 150, 'enemy-default').setScale(0.75).setDepth(2);
+
+                //미사일
+                this.playerMissiles = this.physics.add.group({
+                    defaultKey:"player-basic-missile",
+                });
+                this.enemyMissiles = this.physics.add.group({
+                    defaultKey:"enemy-missile",
+                    collideWorldBounds:true,
+                });
+            
+                //미사일 소멸 이벤트 설정
+                this.physics.world.on("worldbounds", function(body){
+                    body.gameObject.destroy();
+                });
+
+                //카메라 설정
+                this.cameras.main.setBounds(0, 0, 800, 700);
+                this.cameras.main.centerOn(0, 0);
+                this.cameras.main.setZoom(1.2);
+
+                //플레이 설정
+                this.play = true;
+            }
+            update(time, delta){
+                //프레임 카운트
+                this.frameCount++;
+
+                //play 중이 아닐 경우 모든 처리 중지
+                if(!this.play) return;
+
+                //키보드 방향키 처리
+                if(this.key){
+                    if(this.key.up.isDown) this.player.y -= this.speed;
+                    if(this.key.down.isDown) this.player.y += this.speed;
+                    if(this.key.left.isDown) this.player.x -= this.speed;
+                    if(this.key.right.isDown) this.player.x += this.speed;
+                }
+
+                //플레이어 미사일 이동처리
+                this.playerMissiles.children.each((playerMissile)=>{
+                    var target = this.enemy.getCenter();
+                    this.physics.moveTo(playerMissile, target.x, target.y, 300);
+                });
+
+                //적 미사일 생성
+                if(this.frameCount % 10 == 0){
+                    var enemyMissile = this.enemyMissiles.createMultiple({
+                        frameQuantity:1,
+                        key:'enemy-missile',
+                        setXY:{
+                            x:Phaser.Math.Between(0, this.physics.world.bounds.width),
+                            y:50,
+                        },
+                        frame:[Phaser.Math.Between(0, 4)]
+                    });
+
+                    enemyMissile.forEach(em=>{
+                        em.setCircle(8);
+                        em.setVelocityY(200);
+                    });
+
+                    //미사일 소멸 이벤트 트리거
+                    Phaser.Actions.Call(enemyMissile, function (enemyMissile) {
+                        enemyMissile.body.onWorldBounds = true;
+                    });
+
+                    //충돌판정
+                    this.physics.add.overlap(this.player, enemyMissile, (player, enemyMissile)=>{
+                        CheckDamageAndAttack.call(this, player, enemyMissile);
+                    });
+
+                }
+
+                //충돌판정(데미지, 공격)
+                function CheckDamageAndAttack(player, enemyMissile){
+                    //1. 데미지 판정 (58, 10, 12x33) * scale
+                    var playerBounds = player.getBounds();
+                    var missileBounds = enemyMissile.getBounds();
+                    var damageBounds = new Phaser.Geom.Rectangle(playerBounds.x + (58 * this.playerScale), playerBounds.y + (10 * this.playerScale), (12 * this.playerScale), (33 * this.playerScale));
+                    var isDamage = Phaser.Geom.Intersects.RectangleToRectangle(damageBounds, missileBounds);
+                    if(isDamage){
+                        DamageToPlayer.call(this, player, enemyMissile);
+                        return;
+                    }
+
+                    //2. 기본공격 판정 [(0, 65), (46, 44), (82, 44), (127, 65), (3, 97), (124, 97)] 을 다음으로 분해하여 처리
+                    //- 사각형 : (5, 67, 120, 28)
+                    //- 삼각형 : [(3, 66), (64, 38), (124, 66)]
+                    // var baseAttackBounds = new Phaser.Geom.Polygon([
+                    //     playerBounds.x + 0 * this.playerScale, playerBounds.y + 65 * this.playerScale,
+                    //     playerBounds.x + 46 * this.playerScale, playerBounds.y + 44 * this.playerScale,
+                    //     playerBounds.x + 82 * this.playerScale, playerBounds.y + 44 * this.playerScale,
+                    //     playerBounds.x + 127 * this.playerScale, playerBounds.y + 65 * this.playerScale,
+                    //     playerBounds.x + 3 * this.playerScale, playerBounds.y + 97 * this.playerScale,
+                    //     playerBounds.x + 124 * this.playerScale, playerBounds.y + 97 * this.playerScale
+                    // ]);
+                    var baseAttackBounds1 = new Phaser.Geom.Rectangle(
+                        playerBounds.x + 3 * this.playerScale, 
+                        playerBounds.y + 67 * this.playerScale,
+                        playerBounds.width * this.playerScale,
+                        playerBounds.height * this.playerScale
+                    );
+                    var baseAttackBounds2 = new Phaser.Geom.Triangle(
+                        playerBounds.x + 3 * this.playerScale, playerBounds.y + 66 * this.playerScale,
+                        playerBounds.x + 64 * this.playerScale, playerBounds.y + 38 * this.playerScale,
+                        playerBounds.x + 124 * this.playerScale, playerBounds.y + 66 * this.playerScale
+                    );
+                    var isBaseAttack = !enemyMissile.baseAttack && Phaser.Geom.Intersects.RectangleToTriangle(missileBounds, baseAttackBounds1) && Phaser.Geom.Intersects.RectangleToTriangle(missileBounds, baseAttackBounds2);
+                    if(isBaseAttack){
+                        PlayerBaseAttack.call(this, player, enemyMissile);
+                    }
+
+                    //3. 확장공격 판정 [(44, 98), (84, 98), (95, 123), (34, 123)] 을 (40, 101, 51, 20) 사각형으로 변경
+                    // var advanceAttackBounds = new Phaser.Geom.Polygon([
+                    //     playerBounds.x + 44 * this.playerScale, playerBounds.y + 98 * this.playerScale,
+                    //     playerBounds.x + 84 * this.playerScale, playerBounds.y + 98 * this.playerScale,
+                    //     playerBounds.x + 95 * this.playerScale, playerBounds.y + 123 * this.playerScale,
+                    //     playerBounds.x + 34 * this.playerScale, playerBounds.y + 123 * this.playerScale             
+                    // ]);
+                    var advanceAttackBounds = new Phaser.Geom.Rectangle(
+                        playerBounds.x + 40 * this.playerScale,
+                        playerBounds.y + 101 + this.playerScale,
+                        playerBounds.width * this.playerScale,
+                        playerBounds.height * this.playerScale
+                    );
+                    var isAdvanceAttack = !enemyMissile.advanceAttack && Phaser.Geom.Intersects.RectangleToTriangle(missileBounds, advanceAttackBounds);
+                    if(isAdvanceAttack){
+                        PlayerAdvanceAttack.call(this, player, enemyMissile);
+                    }
+                }
+
+
+                //플레이어 기본공격
+                function PlayerBaseAttack(player, enemyMissile){
+                    enemyMissile.baseAttack = true;
+                    //console.log("base attack event");
+
+                    if(!player.damage && !player.advacneAttack) {
+                        player.baseAttack = Date.now();
+                        player.setTexture('player-base-attack');
+                        setTimeout(()=>{
+                            const millis = Date.now() - player.baseAttack;
+                            if(millis > 450) {
+                                player.setTexture('player-default');
+                                delete player.baseAttack;
+                            }
+                        }, 500);
+                    }
+
+                    var playerMissile = this.playerMissiles.createMultiple({
+                        frameQuantity:1,
+                        key:'player-basic-missile',
+                        setXY:{
+                            x:player.getCenter().x,
+                            y:player.getCenter().y,
+                        },
+                        scale:{x:0.25, y:0.25},
+                    });
+                    playerMissile.forEach(pm=>pm.setCircle(16));
+                    this.physics.add.overlap(playerMissile, this.enemy, (pm,e)=>{
+                        DamageToEnemy.call(this, pm, e, this.baseAttackScore);
+                    });
+                }
+
+                //플레이어 확장공격 처리
+                function PlayerAdvanceAttack(player, enemyMissile){
+                    enemyMissile.advanceAttack = true;
+                    //console.log("advance attack event");
+
+                    if(!player.damage) {
+                        player.advanceAttack = Date.now();
+                        player.setTexture('player-advance-attack');
+                        setTimeout(()=>{
+                            const millis = Date.now() - player.advanceAttack;
+                            if(millis > 450) {
+                                player.setTexture('player-default');
+                                delete player.advanceAttack;
+                            }
+                        }, 500);
+                    }
+
+                    var playerMissile = this.playerMissiles.createMultiple({
+                        frameQuantity:1,
+                        key:'player-advance-missile',
+                        setXY:{
+                            x:player.getCenter().x,
+                            y:player.getCenter().y,
+                        },
+                        scale:{x:0.25, y:0.25},
+                    });
+                    playerMissile.forEach(pm=>pm.setCircle(16));
+                    this.physics.add.overlap(playerMissile, this.enemy, (pm,e)=>{
+                        DamageToEnemy.call(this, pm, e, this.advanceAttackScore);
+                    });
+                }
+
+                //플레이어 데미지 처리
+                function DamageToPlayer(player, enemyMissile){
+                    enemyMissile.destroy();
+                    player.damage = Date.now();
+                    player.setTexture('player-damaged');
+                    setTimeout(()=>{
+                        const millis = Date.now() - player.damage;
+                        if(millis > 450) {
+                            player.setTexture('player-default');
+                            delete player.damage;
+                        }
+                    }, 500);
+
+                    if(this.life > 0){
+                        this.life--;
+                        this.lifeText.setText('LIFE : '+this.life);
+                        console.log("player damaged", "life = " + this.life);
+
+                        if(this.life == 0){
+                            //GAME OVER
+                            GameOver.call(this);
+                        }
+                    }
+                }
+
+                //게임오버
+                function GameOver(){
+                    this.play = false;
+
+                    console.log("Game Over...");
+                    this.player.destroy();
+
+                    const screenCenterX = this.cameras.main.x + this.cameras.main.width / 2; 
+                    const screenCenterY = this.cameras.main.y + this.cameras.main.height / 2;
+                    this.gameOverText = this.add.text(screenCenterX, screenCenterY, 'GAME OVER', {fontSize:'50px', fill:'#FFF', align:'center'}).setDepth(99999).setOrigin(0.5);
+                }
+
+                //게임클리어
+                function GameClear(){
+                    this.play = false;
+
+                    console.log("Game Clear!");
+                    this.enemy.destroy();
+                    this.playerMissiles.children.each(pm=>pm.destroy());
+                    this.enemyMissiles.children.each(em=>em.destroy());
+
+                    const screenCenterX = this.cameras.main.x + this.cameras.main.width / 2; 
+                    const screenCenterY = this.cameras.main.y + this.cameras.main.height / 2;
+                    this.gameClearText = this.add.text(screenCenterX, screenCenterY, 'GAME CLEAR', {fontSize:'50px', fill:'#0FF', align:'center'}).setDepth(99999).setOrigin(0.5);
+                }
+                
+                //적 vs 플레이어 미사일 충돌 설정
+                function DamageToEnemy(pm, e, value){
+                    
+                    this.enemyCurrentHp -= value;
+                    
+                    //damage effect
+                    this.enemy.damage = Date.now();
+                    this.enemy.setTexture('enemy-damaged');
+                    setTimeout(()=>{
+                        const millis = Date.now() - this.enemy.damage;
+                        if(millis > 450) this.enemy.setTexture('enemy-default');
+                    }, 500);
+                    
+
+                    console.log("boss damaged", "hp = ", this.enemyCurrentHp + " / " + this.enemyMaxHp);
+                    pm.destroy();
+
+                    this.score += value;
+                    this.scoreText.setText("SCORE : " + this.score);
+                    
+                    //게임 클리어 처리
+                    if(this.enemyCurrentHp <= 0)  {
+                        GameClear.call(this);
+                    }
+                }
+
+                function componentToHex(c) {
+                    var hex = c.toString(16);
+                    return hex.length == 1 ? "0" + hex : hex;
+                }
+
+                function rgbToHex(r, g, b) {
+                    r = r || 0; g = g || 0; b = b || 0;
+                    return componentToHex(r) + componentToHex(g) + componentToHex(b);
+                }
+            }
+
+            
+        };
+        
+        var config = {
+            type: Phaser.AUTO,                    
+            width: 800,
+            height: 700,
+            pixelArt:true,
+            physics:{
+                default:'arcade',
+                arcade: {
+                    gravity: { 
+                        x:0,
+                        y:0
+                    },
+                    debug: true,
+                }
+            },
+            scene: [ChangePlane]
+        };
+
+        const game = new Phaser.Game(config);
+    </script>
+
+</body>
+</html>

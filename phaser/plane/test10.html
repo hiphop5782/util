@@ -31,10 +31,9 @@
                 this.load.image('player-damaged', 'assets/player/damaged.png');
                 this.load.image('enemy-default', 'assets/enemy/default.png');
                 this.load.image('enemy-damaged', 'assets/enemy/damaged.png');
-                this.load.image('enemy-missile', 'assets/missile/bar1.png');
-                this.load.image('player-basic-missile', 'assets/missile/circle1.png');
-                this.load.image('player-advance-missile', 'assets/missile/circle2.png');
-
+                this.load.image('player-basic-missile', 'assets/missile/orb-green.png');
+                this.load.image('player-advance-missile', 'assets/missile/orb-red.png');
+                this.load.spritesheet('enemy-missile', 'assets/missile/balls.png', {frameWidth:17, frameHeight:17});
             }
             create(){
                 //점수판
@@ -79,9 +78,7 @@
                 this.cameras.main.setZoom(1.2);
 
                 //플레이 설정
-                this.play = true;
-
-                
+                this.play = true;                
             }
             update(time, delta){
                 //프레임 카운트
@@ -102,21 +99,21 @@
                 this.playerMissiles.children.each((playerMissile)=>{
                     var target = this.enemy.getCenter();
                     this.physics.moveTo(playerMissile, target.x, target.y, 300);
-                    
                 });
 
                 //적 미사일 생성
                 if(this.frameCount % 10 == 0){
                     var enemyMissile = this.enemyMissiles.createMultiple({
-                        quantity:1,
+                        frameQuantity:1,
                         key:'enemy-missile',
                         setXY:{
                             x:Phaser.Math.Between(0, this.physics.world.bounds.width),
-                            y:5,
-                            // x:this.physics.world.bounds.width / 2,
-                            // y:this.physics.world.bounds.height / 2,
+                            y:50,
                         },
+                        frame:[Phaser.Math.Between(0, 4)]
                     });
+
+                    enemyMissile.forEach(em=>em.setCircle(8));
 
                     //미사일 소멸 이벤트 트리거
                     Phaser.Actions.Call(enemyMissile, function (enemyMissile) {
@@ -157,7 +154,7 @@
                             //console.log("advance attack event");
 
                             var playerMissile = this.playerMissiles.createMultiple({
-                                quantity:1,
+                                frameQuantity:1,
                                 key:'player-advance-missile',
                                 setXY:{
                                     x:player.getCenter().x,
@@ -191,7 +188,7 @@
                     }
 
                     var playerMissile = this.playerMissiles.createMultiple({
-                        quantity:1,
+                        frameQuantity:1,
                         key:'player-basic-missile',
                         setXY:{
                             x:player.getCenter().x,
@@ -237,8 +234,8 @@
                     console.log("Game Over...");
                     this.player.destroy();
 
-                    const screenCenterX = this.cameras.main.worldView.x + this.cameras.main.width / 2; 
-                    const screenCenterY = this.cameras.main.worldView.y + this.cameras.main.height / 2;
+                    const screenCenterX = this.cameras.main.x + this.cameras.main.width / 2; 
+                    const screenCenterY = this.cameras.main.y + this.cameras.main.height / 2;
                     this.gameOverText = this.add.text(screenCenterX, screenCenterY, 'GAME OVER', {fontSize:'50px', fill:'#FFF', align:'center'}).setDepth(99999).setOrigin(0.5);
                 }
 
@@ -251,8 +248,8 @@
                     this.playerMissiles.children.each(pm=>pm.destroy());
                     this.enemyMissiles.children.each(em=>em.destroy());
 
-                    const screenCenterX = this.cameras.main.worldView.x + this.cameras.main.width / 2; 
-                    const screenCenterY = this.cameras.main.worldView.y + this.cameras.main.height / 2;
+                    const screenCenterX = this.cameras.main.x + this.cameras.main.width / 2; 
+                    const screenCenterY = this.cameras.main.y + this.cameras.main.height / 2;
                     this.gameClearText = this.add.text(screenCenterX, screenCenterY, 'GAME CLEAR', {fontSize:'50px', fill:'#0FF', align:'center'}).setDepth(99999).setOrigin(0.5);
                 }
                 
