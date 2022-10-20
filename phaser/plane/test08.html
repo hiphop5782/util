@@ -3,7 +3,7 @@
 <head>
     <style>
     </style>
-    <title>보스 데미지 시작/종료 추가</title>
+    <title>적 효과 추가</title>
 </head>
 <body>
     
@@ -26,11 +26,13 @@
                 this.play = false;
             }
             preload(){
-                this.load.image('player', 'assets/player/test.png');
-                this.load.image('enemy', 'assets/enemy/production.png');
+                this.load.image('player', 'assets/player/production.png');
+                this.load.image('enemy-default', 'assets/enemy/default.png');
+                this.load.image('enemy-damaged', 'assets/enemy/damaged.png');
                 this.load.image('enemy-missile', 'assets/missile/bar1.png');
                 this.load.image('player-basic-missile', 'assets/missile/circle1.png');
                 this.load.image('player-advance-missile', 'assets/missile/circle2.png');
+
             }
             create(){
                 //점수판
@@ -52,7 +54,7 @@
                 };
 
                 //적
-                this.enemy = this.physics.add.image(config.width/2, 100, 'enemy').setScale(0.75).setDepth(2);
+                this.enemy = this.physics.add.image(config.width/2, 100, 'enemy-default').setScale(0.75).setDepth(2);
 
                 //미사일
                 this.playerMissiles = this.physics.add.group({
@@ -72,6 +74,8 @@
 
                 //플레이 설정
                 this.play = true;
+
+                
             }
             update(time, delta){
                 //프레임 카운트
@@ -128,18 +132,7 @@
                         var damageBounds = new Phaser.Geom.Rectangle(playerBounds.x + 58, playerBounds.y + 10, 10, 90);
                         var isDamage = Phaser.Geom.Intersects.RectangleToRectangle(damageBounds, missileBounds);
                         if(isDamage){
-                            enemyMissile.destroy();
-                            //console.log("damage");
-
-                            if(this.life > 0){
-                                this.life--;
-                                this.lifeText.setText('LIFE : '+this.life);
-                                if(this.life == 0){
-                                    //GAME OVER
-                                    GameOver.call(this);
-                                }
-                            }
-                            
+                            DamageToPlayer.call(this, player, enemyMissile);
                             return;
                         }
 
@@ -161,7 +154,7 @@
                             });
                             playerMissile.forEach(pm=>pm.setCircle(16));
                             this.physics.add.overlap(playerMissile, this.enemy, (pm,e)=>{
-                                OverlapBetweenEnemyAndPlayerMissile.call(this, pm, e, this.baseAttackScore);
+                                DamageToEnemy.call(this, pm, e, this.baseAttackScore);
                             });
                         }
 
@@ -183,11 +176,25 @@
                             });
                             playerMissile.forEach(pm=>pm.setCircle(16));
                             this.physics.add.overlap(playerMissile, this.enemy, (pm,e)=>{
-                                OverlapBetweenEnemyAndPlayerMissile.call(this, pm, e, this.advanceAttackScore);
+                                DamageToEnemy.call(this, pm, e, this.advanceAttackScore);
                             });
                         }
                 }
 
+                //플레이어 데미지 처리
+                function DamageToPlayer(player, enemyMissile){
+                    enemyMissile.destroy();
+                    if(this.life > 0){
+                        this.life--;
+                        this.lifeText.setText('LIFE : '+this.life);
+                        console.log("player damaged", "life = " + this.life);
+
+                        if(this.life == 0){
+                            //GAME OVER
+                            GameOver.call(this);
+                        }
+                    }
+                }
 
                 //게임오버
                 function GameOver(){
@@ -215,9 +222,20 @@
                     this.gameClearText = this.add.text(screenCenterX, screenCenterY, 'GAME CLEAR', {fontSize:'50px', fill:'#0FF', align:'center'}).setDepth(99999).setOrigin(0.5);
                 }
                 
-                //보스 vs 플레이어 미사일 충돌 설정
-                function OverlapBetweenEnemyAndPlayerMissile(pm, e, value){
+                //적 vs 플레이어 미사일 충돌 설정
+                function DamageToEnemy(pm, e, value){
+                    
                     this.enemyCurrentHp -= value;
+                    
+                    //damage effect
+                    this.enemy.damage = Date.now();
+                    this.enemy.setTexture('enemy-damaged');
+                    setTimeout(()=>{
+                        const millis = Date.now() - this.enemy.damage;
+                        if(millis > 450) this.enemy.setTexture('enemy-default');
+                    }, 500);
+                    
+
                     console.log("boss damaged", "hp = ", this.enemyCurrentHp + " / " + this.enemyMaxHp);
                     pm.destroy();
 
@@ -228,6 +246,16 @@
                     if(this.enemyCurrentHp <= 0)  {
                         GameClear.call(this);
                     }
+                }
+
+                function componentToHex(c) {
+                    var hex = c.toString(16);
+                    return hex.length == 1 ? "0" + hex : hex;
+                }
+
+                function rgbToHex(r, g, b) {
+                    r = r || 0; g = g || 0; b = b || 0;
+                    return componentToHex(r) + componentToHex(g) + componentToHex(b);
                 }
             }
 
