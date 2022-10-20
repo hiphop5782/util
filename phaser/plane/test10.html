@@ -3,7 +3,7 @@
 <head>
     <style>
     </style>
-    <title>유효 피해 범위 및 이미지 변경</title>
+    <title>카메라 설정</title>
 </head>
 <body>
     
@@ -38,13 +38,13 @@
             }
             create(){
                 //점수판
-                this.scoreText = this.add.text(10, 10, 'SCORE : '+this.score, {fontSize:'30px', fill:'#FFF'}).setDepth(99999);
+                this.scoreText = this.add.text(75, 75, 'SCORE : '+this.score, {fontSize:'30px', fill:'#FFF'}).setDepth(99999);
 
                 //생명
-                this.lifeText = this.add.text(this.physics.world.bounds.width - 160, 10, 'LIFE : '+this.life, {fontSize:'30px', fill:'#FFF'}).setDepth(99999);
+                this.lifeText = this.add.text(this.physics.world.bounds.width - 225, 75, 'LIFE : '+this.life, {fontSize:'30px', fill:'#FFF'}).setDepth(99999);
 
                 //플레이어
-                this.player = this.physics.add.image(config.width/2, config.height - 50, 'player-default').setDepth(2);
+                this.player = this.physics.add.image(config.width/2, config.height - 125, 'player-default').setDepth(2);
                 this.player.setCollideWorldBounds(true);//지도 안에 가두기
                 
                 //플레이어 이동키
@@ -56,7 +56,7 @@
                 };
 
                 //적
-                this.enemy = this.physics.add.image(config.width/2, 100, 'enemy-default').setScale(0.75).setDepth(2);
+                this.enemy = this.physics.add.image(config.width/2, 150, 'enemy-default').setScale(0.75).setDepth(2);
 
                 //미사일
                 this.playerMissiles = this.physics.add.group({
@@ -71,8 +71,12 @@
                 //미사일 소멸 이벤트 설정
                 this.physics.world.on("worldbounds", function(body){
                     body.gameObject.destroy();
-                    //console.log("destroy");
                 });
+
+                //카메라 설정
+                this.cameras.main.setBounds(0, 0, 800, 700);
+                this.cameras.main.centerOn(0, 0);
+                this.cameras.main.setZoom(1.2);
 
                 //플레이 설정
                 this.play = true;
