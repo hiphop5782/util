@@ -3,7 +3,7 @@
 <head>
     <style>
     </style>
-    <title>미사일 공격 추가</title>
+    <title>확장공격 추가</title>
 </head>
 <body>
     
@@ -24,7 +24,8 @@
                 this.load.image('player', 'assets/player/test.png');
                 this.load.image('enemy', 'assets/enemy/production.png');
                 this.load.image('enemy-missile', 'assets/missile/bar1.png');
-                this.load.image('player-missile', 'assets/missile/circle1.png')
+                this.load.image('player-basic-missile', 'assets/missile/circle1.png');
+                this.load.image('player-advance-missile', 'assets/missile/circle2.png');
             }
             create(){
                 //점수판
@@ -50,7 +51,7 @@
 
                 //미사일
                 this.playerMissiles = this.physics.add.group({
-                    defaultKey:"player-missile",
+                    defaultKey:"player-basic-missile",
                 });
                 this.enemyMissiles = this.physics.add.group({
                     defaultKey:"emeny-missile",
@@ -133,7 +134,7 @@
 
                             var playerMissile = this.playerMissiles.createMultiple({
                                 quantity:1,
-                                key:'player-missile',
+                                key:'player-basic-missile',
                                 setXY:{
                                     x:player.getCenter().x,
                                     y:player.getCenter().y,
@@ -150,6 +151,15 @@
                         if(isAdvanceAttack){
                             enemyMissile.advanceAttack = true;
                             console.log("advance attack event");
+
+                            var playerMissile = this.playerMissiles.createMultiple({
+                                quantity:1,
+                                key:'player-advance-missile',
+                                setXY:{
+                                    x:player.getCenter().x,
+                                    y:player.getCenter().y,
+                                },
+                            });
 
                             this.score += 20;
                             this.scoreText.setText("SCORE : " + this.score);
