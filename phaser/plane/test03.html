@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+    </style>
+</head>
+<body>
+    
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.15.1/dist/phaser-arcade-physics.min.js"></script>
+    <script type="text/babel">
+        class Round1 extends Phaser.Scene {
+
+            constructor(){
+                super();
+                this.score = 0;
+                this.start = false;
+                this.frameCount = 0;
+            }
+            preload(){
+                this.load.image('player', 'assets/player/test.png');
+                this.load.image('enemy', 'assets/enemy/production.png');
+                this.load.image('missile-bar', 'assets/missile/line.png');
+            }
+            create(){
+                //점수판
+                this.scoreText = this.add.text(10, 10, 'SCORE : 0', {fontSize:'30px', fill:'#FFF'}).setDepth(99999);
+
+                //플레이어
+                this.player = this.physics.add.image(config.width/2, config.height - 50, 'player').setDepth(2);
+                this.player.setCollideWorldBounds(true);//지도 안에 가두기
+                
+                //플레이어 이동키
+                this.key = {
+                    up : this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.UP),
+                    down : this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.DOWN),
+                    left : this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.LEFT),
+                    right : this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.RIGHT),
+                };
+
+                //적
+                this.enemy = this.add.image(config.width/2, 80, 'enemy').setScale(0.75).setDepth(2);
+
+                //미사일
+                this.missiles = this.physics.add.group({
+                    defaultKey:"missile",
+                    collideWorldBounds:true,
+                    velocityY:200,
+                });
+            
+                this.physics.world.on("worldbounds", function(body){
+                    body.gameObject.destroy();
+                    console.log("destroy");
+                });
+            }
+            update(time, delta){
+                this.frameCount++;
+
+                if(this.key){
+                    if(this.key.up.isDown) this.player.y -= 5;
+                    if(this.key.down.isDown) this.player.y += 5;
+                    if(this.key.left.isDown) this.player.x -= 5;
+                    if(this.key.right.isDown) this.player.x += 5;
+                }
+
+                if(this.frameCount % 10 == 0){
+                    //var x = Phaser.Math.Between(0, this.physics.world.bounds.width);
+                    //var y = 0;
+                    //var missile = this.physics.add.image(x, y, 'missile-line');
+                    //this.missiles.add(missile);
+
+                    var missile = this.missiles.createMultiple({
+                        quantity:1,
+                        key:'missile-bar',
+                        setXY:{
+                            x:Phaser.Math.Between(0, this.physics.world.bounds.width),
+                            y:5,
+                            // x:this.physics.world.bounds.width / 2,
+                            // y:this.physics.world.bounds.height / 2,
+                        },
+                    });
+
+                    Phaser.Actions.Call(missile, function (missile) {
+                        missile.body.onWorldBounds = true;
+                    });
+
+                    //충돌판정
+                    this.physics.add.overlap(this.player, missile, (player, missile)=>{
+                        //1. 데미지 판정 (58, 10, 10x90)
+                        var playerBounds = player.getBounds();
+                        var damageBounds = new Phaser.Geom.Rectangle(playerBounds.x + 58, playerBounds.y + 10, 10, 90);
+                        var isDamage = Phaser.Geom.Intersects.RectangleToRectangle(damageBounds, missile.getBounds());
+                        if(isDamage){
+                            missile.destroy();
+                            return;
+                        }
+
+                        //2. 기본공격 판정
+                        //3. 확장공격 판정
+
+                    });
+                    
+                    //this.physics.add.collider(this.player, missile, function(player, missile){
+                        //    missile.destroy();
+                        //});
+                    }
+                        
+                //Phaser.Actions.IncY(this.missiles.getChildren(), 1);
+            }
+        }
+        
+        var config = {
+            type: Phaser.AUTO,                    
+            width: 500,
+            height: 700,
+            pixelArt:true,
+            physics:{
+                default:'arcade',
+                arcade: {
+                    gravity: { 
+                        x:0,
+                        y:0
+                    },
+                    debug: true,
+                }
+            },
+            scene: [Round1]
+        };
+
+        const game = new Phaser.Game(config);
+    </script>
+
+</body>
+</html>
