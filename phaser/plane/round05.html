@@ -2,6 +2,9 @@
 <html>
 <head>
     <style>
+        html, body {
+            margin:0;
+        }
     </style>
     <title>Round 5</title>
 </head>
@@ -19,24 +22,24 @@
                 this.life = 3;
                 this.speed = 5;
                 this.frameCount = 0;
-                this.enemyMaxHp = 4000;
+                this.enemyMaxHp = 5000;
                 this.enemyCurrentHp = this.enemyMaxHp;
                 this.baseAttackScore = 10;
                 this.advanceAttackScore = 20;
                 this.play = false;
-                this.playerScale = 0.75;
                 this.combo = 0;
                 this.comboTime = Date.now();
             }
             preload(){
-                this.load.image('player-default', 'assets/player2/default.png');
-                this.load.image('player-base-attack', 'assets/player2/base-attack.png');
-                this.load.image('player-advance-attack', 'assets/player2/advance-attack.png');
-                this.load.image('player-damaged', 'assets/player2/damaged.png');
-                this.load.image('enemy-default', 'assets/enemy/default.png');
-                this.load.image('enemy-damaged', 'assets/enemy/damaged.png');
+                this.load.image('player-default', 'assets/player3/test-default.png');
+                this.load.image('player-base-attack', 'assets/player3/test-base-attack.png');
+                this.load.image('player-advance-attack', 'assets/player3/test-advance-attack.png');
+                this.load.image('player-damaged', 'assets/player3/test-damaged.png');
+                this.load.image('enemy-default', 'assets/enemy2/round3-default.png');
+                this.load.image('enemy-warning', 'assets/enemy2/round3-warning.png');
+                this.load.image('enemy-damaged', 'assets/enemy2/round3-damaged.png');
                 this.load.image('player-base-missile', 'assets/missile/orb-green.png');
-                this.load.image('player-advance-missile', 'assets/missile/orb-red.png');
+                this.load.image('player-advance-missile', 'assets/missile/orb-blue.png');
                 this.load.spritesheet('enemy-missile', 'assets/missile/balls.png', {frameWidth:17, frameHeight:17});
             }
             create(){
@@ -47,7 +50,7 @@
                 this.lifeText = this.add.text(this.physics.world.bounds.width - 225, 75, 'LIFE : '+this.life, {fontSize:'30px', fill:'#FFF'}).setDepth(99999);
 
                 //플레이어
-                this.player = this.physics.add.image(config.width/2, config.height - 125, 'player-default').setScale(this.playerScale).setDepth(2);
+                this.player = this.physics.add.image(config.width/2, config.height - 125, 'player-default').setDepth(2);
                 this.player.setCollideWorldBounds(true);//지도 안에 가두기
                 
                 //플레이어 이동키
@@ -59,7 +62,7 @@
                 };
 
                 //적
-                this.enemy = this.physics.add.image(config.width/2, 150, 'enemy-default').setScale(0.75).setDepth(2);
+                this.enemy = this.physics.add.image(config.width/2, 150, 'enemy-default').setCircle(20).setDepth(2);
 
                 //미사일
                 this.playerMissiles = this.physics.add.group({
@@ -240,12 +243,24 @@
                 this.enemy.setTexture('enemy-damaged');
                 setTimeout(()=>{
                     const millis = Date.now() - this.enemy.damage;
-                    if(millis > 450) this.enemy.setTexture('enemy-default');
+                    if(millis > 450)  {
+                        if(this.enemy.warning) 
+                            this.enemy.setTexture('enemy-warning');
+                        else
+                            this.enemy.setTexture('enemy-default'); 
+                    }
                 }, 500);
                 
 
                 console.log("boss damaged", "hp = ", this.enemyCurrentHp + " / " + this.enemyMaxHp);
                 pm.destroy();
+
+                const percent = this.enemyCurrentHp / this.enemyMaxHp * 100;
+                if(!this.enemy.warning && percent <= 25){
+                    this.enemy.warning = true;
+                    this.enemy.setTexture("enemy-warning");
+                    console.log(`*** warning : monster hp under 25% ***`);
+                }
 
                 this.score += pm.score;
                 this.scoreText.setText("SCORE : " + this.score);
@@ -269,55 +284,41 @@
 
             //충돌판정(데미지, 공격)
             CheckDamageAndAttack(player, enemyMissile){
-                //1. 데미지 판정 (58, 10, 12x33) * scale
+                //1. 데미지 판정
                 var playerBounds = player.getBounds();
                 var missileBounds = enemyMissile.getBounds();
-                var damageBounds = new Phaser.Geom.Rectangle(playerBounds.x + (58 * this.playerScale), playerBounds.y + (10 * this.playerScale), (12 * this.playerScale), (33 * this.playerScale));
+                var damageBounds = new Phaser.Geom.Rectangle(playerBounds.x + 29, playerBounds.y + 5, 6, 16);
                 var isDamage = Phaser.Geom.Intersects.RectangleToRectangle(damageBounds, missileBounds);
                 if(isDamage){
                     this.DamageToPlayer(player, enemyMissile);
                     return;
                 }
 
-                //2. 기본공격 판정 [(0, 65), (46, 44), (82, 44), (127, 65), (3, 97), (124, 97)] 을 다음으로 분해하여 처리
-                //- 사각형 : (5, 67, 120, 28)
-                //- 삼각형 : [(3, 66), (64, 38), (124, 66)]
-                // var baseAttackBounds = new Phaser.Geom.Polygon([
-                //     playerBounds.x + 0 * this.playerScale, playerBounds.y + 65 * this.playerScale,
-                //     playerBounds.x + 46 * this.playerScale, playerBounds.y + 44 * this.playerScale,
-                //     playerBounds.x + 82 * this.playerScale, playerBounds.y + 44 * this.playerScale,
-                //     playerBounds.x + 127 * this.playerScale, playerBounds.y + 65 * this.playerScale,
-                //     playerBounds.x + 3 * this.playerScale, playerBounds.y + 97 * this.playerScale,
-                //     playerBounds.x + 124 * this.playerScale, playerBounds.y + 97 * this.playerScale
-                // ]);
-                var baseAttackBounds1 = new Phaser.Geom.Rectangle(
-                    playerBounds.x + 3 * this.playerScale, 
-                    playerBounds.y + 67 * this.playerScale,
-                    playerBounds.width * this.playerScale,
-                    playerBounds.height * this.playerScale
+                //2. 기본공격 판정 다각형을 사각형과 삼각형으로 분해하여 처리
+                var baseAttackBounds1 = new Phaser.Geom.Triangle(
+                    playerBounds.x + 10, playerBounds.y + 28,
+                    playerBounds.x + 54, playerBounds.y + 28,
+                    playerBounds.x + 32, playerBounds.y + 20
                 );
-                var baseAttackBounds2 = new Phaser.Geom.Triangle(
-                    playerBounds.x + 3 * this.playerScale, playerBounds.y + 66 * this.playerScale,
-                    playerBounds.x + 64 * this.playerScale, playerBounds.y + 38 * this.playerScale,
-                    playerBounds.x + 124 * this.playerScale, playerBounds.y + 66 * this.playerScale
+                var baseAttackBounds2 = new Phaser.Geom.Rectangle(
+                    playerBounds.x + 10, 
+                    playerBounds.y + 28,
+                    playerBounds.width - 20,
+                    14
                 );
-                var isBaseAttack = !enemyMissile.baseAttack && Phaser.Geom.Intersects.RectangleToTriangle(missileBounds, baseAttackBounds1) && Phaser.Geom.Intersects.RectangleToTriangle(missileBounds, baseAttackBounds2);
+
+                var isBaseAttack = enemyMissile.baseAttack !== true && (Phaser.Geom.Intersects.RectangleToTriangle(missileBounds, baseAttackBounds1) || Phaser.Geom.Intersects.RectangleToRectangle(missileBounds, baseAttackBounds2));
                 if(isBaseAttack){
+                    enemyMissile.baseAttack = true;
                     this.PlayerBaseAttack(player, enemyMissile);
                 }
 
-                //3. 확장공격 판정 [(44, 98), (84, 98), (95, 123), (34, 123)] 을 (40, 101, 51, 20) 사각형으로 변경
-                // var advanceAttackBounds = new Phaser.Geom.Polygon([
-                //     playerBounds.x + 44 * this.playerScale, playerBounds.y + 98 * this.playerScale,
-                //     playerBounds.x + 84 * this.playerScale, playerBounds.y + 98 * this.playerScale,
-                //     playerBounds.x + 95 * this.playerScale, playerBounds.y + 123 * this.playerScale,
-                //     playerBounds.x + 34 * this.playerScale, playerBounds.y + 123 * this.playerScale             
-                // ]);
+                //3. 확장공격 판정 - 다각형을 사각형으로 변경
                 var advanceAttackBounds = new Phaser.Geom.Rectangle(
-                    playerBounds.x + 40 * this.playerScale,
-                    playerBounds.y + 101 + this.playerScale,
-                    playerBounds.width * this.playerScale,
-                    playerBounds.height * this.playerScale
+                    playerBounds.x + 25,
+                    playerBounds.y + 54,
+                    14,
+                    6
                 );
                 var isAdvanceAttack = !enemyMissile.advanceAttack && Phaser.Geom.Intersects.RectangleToTriangle(missileBounds, advanceAttackBounds);
                 if(isAdvanceAttack){

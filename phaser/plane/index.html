@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AvoidCraft</title>
+    <link rel="stylesheet" type="text/css" href="https://bootswatch.com/5/cyborg/bootstrap.css">
+    <style>
+        .game-player {
+            background-color: var(--bs-body-bg);
+        }
+    </style>
+    
+    <script src="https://code.jquery.com/jquery-3.6.1.min.js"></script>
+    <script>
+        $(function(){
+            $(".game-round").click(function(e){
+                e.preventDefault();
+
+                $(".game-player").attr("src", $(this).attr("href"));
+            });
+        });
+    </script>
+</head>
+<body>
+    <div class="container-fluid">
+    
+        <div class="row">
+            <div class="col-md-10 offset-md-1 mt-5">
+                <div class="row">
+                    <div class="col-2">
+                        <div class="row">
+                            <div class="col">
+                                <h2 class="text-center">Avoid<br>Craft</h2>
+                                <p class="text-center">피해라!<br>피하면 이길것이다</p>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col">
+                                <ul class="list-group">
+                                    <li class="list-group-item"><a class="game-round" href="round01.html">Round 1</a></li>
+                                    <li class="list-group-item"><a class="game-round" href="round02.html">Round 2</a></li>
+                                    <li class="list-group-item"><a class="game-round" href="round03.html">Round 3</a></li>
+                                    <li class="list-group-item"><a class="game-round" href="round04.html">Round 4</a></li>
+                                    <li class="list-group-item"><a class="game-round" href="round05.html">Round 5</a></li>
+                                </ul>
+                            </div>
+                        </div>                        
+                    </div>
+                    <div class="col-10">
+                        <iframe class="game-player" src="background.html" noscrolling allowtransparency="true" width="800" height="700">
+                            
+                        </iframe>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
