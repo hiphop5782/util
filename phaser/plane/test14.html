@@ -24,6 +24,7 @@
                 this.frameCount = 0;
                 this.enemyMaxHp = 5000;
                 this.enemyCurrentHp = this.enemyMaxHp;
+                this.enemyWarningPercent;
                 this.baseAttackScore = 10;
                 this.advanceAttackScore = 20;
                 this.play = false;
@@ -264,10 +265,10 @@
                 pm.destroy();
 
                 const percent = this.enemyCurrentHp / this.enemyMaxHp * 100;
-                if(!this.enemy.warning && percent <= 25){
+                if(!this.enemy.warning && percent <= this.enemyWarningPercent){
                     this.enemy.warning = true;
                     this.enemy.setTexture("enemy-warning");
-                    console.log(`*** warning : monster hp under 25% ***`);
+                    console.log(`*** warning : monster hp under ${percent}% ***`);
                 }
 
                 this.score += pm.score;
