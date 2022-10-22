@@ -6,14 +6,14 @@
             margin:0;
         }
     </style>
-    <title>Round 5</title>
+    <title>Round 6</title>
 </head>
 <body>
     
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.15.1/dist/phaser-arcade-physics.min.js"></script>
     <script type="text/babel">
-        class Round5 extends Phaser.Scene {
+        class Round6 extends Phaser.Scene {
 
             constructor(){
                 super();
@@ -36,9 +36,9 @@
                 this.load.image('player-base-attack', 'assets/player3/test-base-attack.png');
                 this.load.image('player-advance-attack', 'assets/player3/test-advance-attack.png');
                 this.load.image('player-damaged', 'assets/player3/test-damaged.png');
-                this.load.image('enemy-default', 'assets/enemy2/round5-default.png');
-                this.load.image('enemy-warning', 'assets/enemy2/round5-warning.png');
-                this.load.image('enemy-damaged', 'assets/enemy2/round5-damaged.png');
+                this.load.image('enemy-default', 'assets/enemy2/round6-default.png');
+                this.load.image('enemy-warning', 'assets/enemy2/round6-warning.png');
+                this.load.image('enemy-damaged', 'assets/enemy2/round6-damaged.png');
                 this.load.image('player-base-missile', 'assets/missile/orb-green.png');
                 this.load.image('player-advance-missile', 'assets/missile/orb-blue.png');
                 this.load.spritesheet('enemy-missile', 'assets/missile/balls.png', {frameWidth:17, frameHeight:17});
@@ -72,8 +72,8 @@
                 this.enemyMissiles = this.physics.add.group({
                     defaultKey:"enemy-missile",
                     collideWorldBounds:true,
-                    bounceX:1,
-                    bounceY:1,
+                    // bounceX:1,
+                    // bounceY:1,
                 });
             
                 //미사일 소멸 이벤트 설정
@@ -88,10 +88,6 @@
 
                 //플레이 설정
                 this.play = true;
-
-                //적 미사일 생성
-                this.CreateEnemyMissile(1);
-                this.CreateEnemyMissile(-1);
             }
             update(time, delta){
                 //프레임 카운트
@@ -113,23 +109,43 @@
                     var target = this.enemy.getCenter();
                     this.physics.moveTo(playerMissile, target.x, target.y, 300);
                 });
+
+                this.CreateEnemyMissile(1);
+                this.CreateEnemyMissile(2);
+                this.CreateEnemyMissile(3);
+                this.CreateEnemyMissile(4);
             }
 
             //적 미사일 생성
-            CreateEnemyMissile(v){
+            CreateEnemyMissile(type){
+                if(this.frameCount % 100 != 0) return;
+
+                let x, y;
+                switch(type){
+                    case 1: x = 10, y = 10; break;
+                    case 2: x = config.width - 10, y = 10; break;
+                    case 3: x = 10, y = config.height - 10; break;
+                    case 4: x = config.width - 10, y = config.height - 10; break;
+                }
                 var enemyMissile = this.enemyMissiles.createMultiple({
-                    frameQuantity:5,
+                    frameQuantity:1,
                     key:'enemy-missile',
                     setXY:{
-                        x:config.width/2,
-                        y:50,
+                        x:x,
+                        y:y,
                     },
                     frame:[0,1,2,3,4],
                 });
-                enemyMissile.forEach(em=>{
+                enemyMissile.forEach((em, i)=>{
                     em.setCircle(8);
-                    const vx = Phaser.Math.Between(50, 150) * v;
-                    const vy = Phaser.Math.Between(50, 150) * v;
+                    let vx, vy;
+                    switch(type){
+                    case 1: vx = Phaser.Math.Between(50, 150), vy = Phaser.Math.Between(50, 150); break;
+                    case 2: vx = Phaser.Math.Between(-150, -50), vy = Phaser.Math.Between(50, 150); break;
+                    case 3: vx = Phaser.Math.Between(50, 150), vy = Phaser.Math.Between(-150, -50); break;
+                    case 4: vx = Phaser.Math.Between(-150, -50), vy = Phaser.Math.Between(-150, -50); break;
+                    }
+                    console.log(i, x, y, vx, vy);
                     em.setVelocityX(vx);
                     em.setVelocityY(vy);
                 });
@@ -314,12 +330,10 @@
                     playerBounds.width - 20,
                     14
                 );
-                
-                const now = Date.now();
-                const baseAttack = now - (enemyMissile.baseAttack || 0);
-                var isBaseAttack = baseAttack >= 1000 && (Phaser.Geom.Intersects.RectangleToTriangle(missileBounds, baseAttackBounds1) || Phaser.Geom.Intersects.RectangleToRectangle(missileBounds, baseAttackBounds2));
+
+                var isBaseAttack = enemyMissile.baseAttack !== true && (Phaser.Geom.Intersects.RectangleToTriangle(missileBounds, baseAttackBounds1) || Phaser.Geom.Intersects.RectangleToRectangle(missileBounds, baseAttackBounds2));
                 if(isBaseAttack){
-                    enemyMissile.baseAttack = now;
+                    enemyMissile.baseAttack = true;
                     this.PlayerBaseAttack(player, enemyMissile);
                 }
 
@@ -330,11 +344,8 @@
                     14,
                     6
                 );
-
-                const advanceAttack = now - (enemyMissile.advanceAttack || 0);
-                var isAdvanceAttack = advanceAttack >= 1000 && Phaser.Geom.Intersects.RectangleToTriangle(missileBounds, advanceAttackBounds);
+                var isAdvanceAttack = !enemyMissile.advanceAttack && Phaser.Geom.Intersects.RectangleToTriangle(missileBounds, advanceAttackBounds);
                 if(isAdvanceAttack){
-                    enemyMissile.advanceAttack = now;
                     this.PlayerAdvanceAttack(player, enemyMissile);
                 }
             }
@@ -342,6 +353,7 @@
 
             //플레이어 기본공격
             PlayerBaseAttack(player, enemyMissile){
+                enemyMissile.baseAttack = true;
                 //console.log("base attack event");
 
                 if(!player.damage && !player.advacneAttack) {
@@ -365,6 +377,7 @@
 
             //플레이어 확장공격 처리
             PlayerAdvanceAttack(player, enemyMissile){
+                enemyMissile.advanceAttack = true;
                 //console.log("advance attack event");
 
                 if(!player.damage) {
@@ -403,7 +416,7 @@
                     //debug: true,
                 }
             },
-            scene: [Round5]
+            scene: [Round6]
         };
 
         const game = new Phaser.Game(config);
