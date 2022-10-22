@@ -171,6 +171,8 @@
 
             //플레이어 데미지 처리
             DamageToPlayer(player, enemyMissile){
+                if(player.invincible === true) return; 
+
                 enemyMissile.destroy();
                 player.damage = Date.now();
                 player.setTexture('player-damaged');
@@ -182,15 +184,21 @@
                     }
                 }, 500);
 
+                player.invincible = true;
                 if(this.life > 0){
                     this.life--;
                     this.lifeText.setText('LIFE : '+this.life);
                     console.log("player damaged", "life = " + this.life);
 
-                    if(this.life == 0){
-                        //GAME OVER
-                        this.GameOver();
-                    }
+                    setTimeout(()=>{
+                        if(player.invincible)
+                            player.invincible = false;
+                    }, 1000);
+                }
+
+                if(this.life == 0){
+                    //GAME OVER
+                    this.GameOver();
                 }
             }
 
