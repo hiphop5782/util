@@ -73,6 +73,8 @@
 
             hit(missile){
                 //console.log("player hit");
+                if(this.hp.current == 0) return;
+
                 const playerBounds = this.getBounds();
                 var missileBounds = missile.getBounds();
                 var damageBounds = new Phaser.Geom.Rectangle(playerBounds.x + 29, playerBounds.y + 5, 6, 16);
@@ -149,7 +151,22 @@
                     }, 1000);
                 }
             }
-            baseAttack(missile){}
+            baseAttack(missile){
+                //기체 변경 - 0.5초
+                this.lastBaseAttack = Date.now();
+                this.setTexture('player-base-attack');
+
+                //미사일 생성
+
+
+                //기체 원상태로 복구
+                setTimeout(()=>{
+                    const diff = Date.now() - this.lastBaseAttack;
+                    if(diff > 499) {
+                        this.setTexture('player-default');
+                    }
+                }, 500);
+            }
             advanceAttack(missile){}
         }
 
@@ -162,7 +179,6 @@
                 this.target = null;
 
                 this.setTexture('enemy-default');
-                console.log(this);
                 this.setPosition(x, y);
                 this.setDepth(2);
 
@@ -176,7 +192,8 @@
 
                 this.attack = {
                     damage:1,
-                    delay:50
+                    delay:25,
+                    speed:200,
                 }
                 this.frameCount = 0;
 
@@ -191,7 +208,8 @@
             preUpdate(time, delta){
                 if(++this.frameCount % this.attack.delay == 0){
                     if(this.target != null){
-                        this.missile.createMissile(this.target);
+                        //this.missile.createMissile(this.target);
+                        this.missile.createLinearMissile(Direction.RIGHT_UP, this.attack.speed);
                     }
                 }
             }
@@ -202,6 +220,17 @@
 
         }
 
+        class Direction {
+            static UP = 90;
+            static DOWN = 270;
+            static LEFT = 0;
+            static RIGHT  = 180;
+            static LEFT_DOWN = 315;
+            static RIGHT_DOWN = 225;
+            static LEFT_UP = 45;
+            static RIGHT_UP = 135;
+        }
+
         class Missile extends Phaser.Physics.Arcade.Sprite {
             constructor(scene, damage){
                 super(scene);
@@ -209,8 +238,7 @@
                 this.scene = scene;
 
                 this.attack = {
-                    damage:damage,
-                    speed:100,
+                    damage:damage
                 };
 
                 //미사일 그룹 생성
@@ -222,6 +250,66 @@
                 scene.physics.world.on("worldbounds", function(body){
                     body.gameObject.destroy();
                 });
+
+                this.mapWidth = scene.physics.world.bounds.width;
+                this.mapHeight = scene.physics.world.bounds.height;
+                const offset = 10;
+                this.mapRect = new Phaser.Geom.Rectangle(
+                    offset, offset, this.mapWidth - offset*2, this.mapHeight - offset*2);
+            }
+
+            createLineByAngle(angle) {
+                const rad = Phaser.Math.DegToRad(angle);       
+                const cx = this.scene.physics.world.bounds.centerX;
+                const cy = this.scene.physics.world.bounds.centerY;
+                const dx = cx + Math.cos(rad) * this.mapWidth;
+                const dy = cy + Math.sin(rad) * this.mapHeight;
+                return new Phaser.Geom.Line(cx, cy, dx, dy);
+            }
+
+            createLinearMissile(angle, speed){
+                //각도에 따른 시작지점, 이동속도 계산
+                //우 : 0 , 상 : 90 , 좌 : 180 , 하 : 270
+
+                //선 생성(중심에서 시작하여 각도와 폭/높이로 계산)
+                const lineCenter = this.createLineByAngle(angle);
+                const lineMin = this.createLineByAngle(angle - 45);
+                const lineMax = this.createLineByAngle(angle + 45);
+
+                //반드시 1개의 충돌 포인트를 가짐
+                const center = Phaser.Geom.Intersects.GetLineToRectangle(lineCenter, this.mapRect)[0];
+
+                //랜덤을 위한 추가 계산(±45degree)
+                const min = Phaser.Geom.Intersects.GetLineToRectangle(lineMin, this.mapRect)[0];
+                const max = Phaser.Geom.Intersects.GetLineToRectangle(lineMax, this.mapRect)[0];
+
+                const line1 = new Phaser.Geom.Line(min.x, min.y, center.x, center.y);
+                const line2 = new Phaser.Geom.Line(center.x, center.y, max.x, max.y);
+                let point;
+                if(Phaser.Math.Between(1, 2) == 1)
+                    point = line1.getRandomPoint();
+                else
+                    point = line2.getRandomPoint();
+
+                //미사일 생성
+                const missile = this.missileGroup.createMultiple({
+                    frameQuantity:1,
+                    key:'enemy-missile',
+                    frame:[Phaser.Math.Between(0, 4)],
+                    setXY:{x:point.x, y:point.y},
+                });
+
+                const rad = Phaser.Math.DegToRad(angle);       
+                missile.forEach(m=>{
+                    m.setCircle(8);
+                    m.damage = this.attack.damage;
+                    const vx = -Math.cos(rad) * speed;
+                    const vy = -Math.sin(rad) * speed;
+                    m.setVelocityX(vx);
+                    m.setVelocityY(vy);
+                });
+
+                
             }
 
             createMissile(target){
@@ -238,7 +326,7 @@
                 missile.forEach(m=>{
                     m.setCircle(8);
                     m.damage = this.attack.damage;
-                    m.setVelocityY(this.attack.speed);
+                    m.setVelocityY(100);
                 });
 
                 //미사일 소멸 이벤트 트리거
@@ -252,6 +340,14 @@
 
             checkCollision(missile, defender){
                 defender.hit(missile);
+            }
+        }
+
+        class TargetMissile extends Missile {
+            constructor(scene, damage){
+                super(scene, damage, target);
+
+                this.target = target;
             }
         }
 
