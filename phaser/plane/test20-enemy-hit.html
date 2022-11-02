@@ -28,6 +28,7 @@
                 this.attack = {
                     damage:10,
                     combo:0,
+                    speed:300,
                 };
                 this.hp = {
                     max:3,
@@ -159,7 +160,7 @@
                 this.setTexture('player-base-attack');
 
                 //미사일 생성
-                missile.createTargetMissile(this.target);
+                this.missile.createTargetMissile(this, this.target, this.attack.speed);
 
                 //기체 원상태로 복구
                 setTimeout(()=>{
@@ -230,8 +231,34 @@
                 }
             }
 
-            hit(damage){
+            getDefaultTexture(){
+                return this.hp.percent < 40 ? 'enemy-warning' : 'enemy-default';
+            }
+
+            hit(missile){
                 //console.log("enemy hit");
+                if(this.hp.current <= 0) return;
+                
+                //데미지 처리
+                this.hp.current -= missile.damage;
+                console.log(`보스 체력 : ${this.hp.current} / ${this.hp.max}`);
+
+                //이미지 변경
+                this.setTexture('enemy-damaged');
+                this.damageTime = Date.now();
+                setTimeout(()=>{
+                    const diff = Date.now() - this.damageTime;
+                    if(diff > 499) this.setTexture(this.getDefaultTexture());
+                }, 500);
+
+                //미사일 제거
+                missile.destroy();
+
+                //보스 체력이 0이하면 게임 클리어
+                if(this.hp.current <= 0) {
+                    console.log("game clear");
+                    this.destroy();
+                }
             }
 
         }
@@ -340,11 +367,32 @@
 
             }
 
-            createTargetMissile(attacker, target){
-                const px = attacker.centerX;
-                const py = attacker.centerY;
-
+            createTargetMissile(attacker, target, speed){
+                const pos = attacker.getCenter();
+                const px = pos.x;
+                const py = pos.y + attacker.height/2;
                 
+                //미사일 생성
+                const missile = this.missileGroup.createMultiple({
+                    frameQuantity:1,
+                    key:'player-base-missile',
+                    setXY:{x:px, y:py},
+                });
+
+                missile.forEach(m=>{
+                    m.setCircle(11);
+                    m.damage = attacker.attack.damage;
+                    const targetPos = target.getCenter();
+                    this.scene.physics.moveTo(m, targetPos.x, targetPos.y, speed);
+                });
+
+                //미사일 소멸 이벤트 트리거
+                Phaser.Actions.Call(missile, function (m) {
+                    m.body.onWorldBounds = true;
+                });
+
+                //충돌판정
+                this.scene.physics.add.overlap(missile, target, this.checkCollision);
             }
 
             checkCollision(missile, defender){
