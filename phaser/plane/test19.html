@@ -47,6 +47,8 @@
                 scene.add.existing(this);//화면 추가
                 scene.physics.add.existing(this);//물리엔진 추가
                 this.setCollideWorldBounds(true);//지도 안에 가두기
+
+                this.missile = new Missile(scene, this.attack.damage);
             }
             preUpdate(time, delta){
                 //목숨이 있을 경우 이동처리
@@ -157,7 +159,7 @@
                 this.setTexture('player-base-attack');
 
                 //미사일 생성
-
+                missile.createTargetMissile(this.target);
 
                 //기체 원상태로 복구
                 setTimeout(()=>{
@@ -338,42 +340,15 @@
 
             }
 
-            createMissile(target){
-                const missile = this.missileGroup.createMultiple({
-                    frameQuantity:1,
-                    key:'enemy-missile',
-                    setXY:{
-                        x:Phaser.Math.Between(0, this.scene.physics.world.bounds.width),
-                        y:10,
-                    },
-                    frame:[Phaser.Math.Between(0, 4)]
-                });
+            createTargetMissile(attacker, target){
+                const px = attacker.centerX;
+                const py = attacker.centerY;
 
-                missile.forEach(m=>{
-                    m.setCircle(8);
-                    m.damage = this.attack.damage;
-                    m.setVelocityY(100);
-                });
-
-                //미사일 소멸 이벤트 트리거
-                Phaser.Actions.Call(missile, function (m) {
-                    m.body.onWorldBounds = true;
-                });
-
-                //충돌판정
-                this.scene.physics.add.overlap(missile, target, this.checkCollision);
+                
             }
 
             checkCollision(missile, defender){
                 defender.hit(missile);
-            }
-        }
-
-        class TargetMissile extends Missile {
-            constructor(scene, damage){
-                super(scene, damage, target);
-
-                this.target = target;
             }
         }
 
@@ -409,18 +384,11 @@
                 this.player.target = this.enemy;
                 this.enemy.target = this.player;
 
-                //미사일
-            
-                //미사일 소멸 이벤트 설정
-
                 //카메라 설정
                 this.cameras.main.setBounds(0, 0, 800, 700);
                 this.cameras.main.centerOn(0, 0);
                 this.cameras.main.setZoom(1.05);
 
-                //플레이 설정
-
-                //적 미사일 생성
             }
 
         };
