@@ -98,7 +98,7 @@
 
                 this.attack = {
                     damage:10,
-                    speed:300,
+                    speed:500,
                 };
                 this.combo = {
                     count:1,
@@ -271,7 +271,8 @@
 
                 //미사일 생성
                 //this.missile.createTargetMissile(this, this.target, info);
-                this.missile.createAccelerationMissile(this, this.target, info);
+                //this.missile.createAccelerationMissile(this, this.target, info);
+                this.missile.createAccelerationMissileWithEffect(this, this.target, info);
 
                 //기체 원상태로 복구
                 setTimeout(()=>{
@@ -297,8 +298,9 @@
                 }
 
                 //미사일 생성
-                //this.missile.createTargetMissile(this, this.target, info);
-                this.missile.createAccelerationMissile(this, this.target, info);
+                // this.missile.createTargetMissile(this, this.target, info);
+                // this.missile.createAccelerationMissile(this, this.target, info);
+                this.missile.createAccelerationMissileWithEffect(this, this.target, info);
 
                 //기체 원상태로 복구
                 setTimeout(()=>{
@@ -420,6 +422,7 @@
                     defaultKey:"enemy-missile",
                     collideWorldBounds:true,
                 });
+
                 //벽 충돌 시 소멸 이벤트 설정
                 scene.physics.world.on("worldbounds", function(body){
                     body.gameObject.destroy();
@@ -556,12 +559,106 @@
                 this.scene.physics.add.overlap(missile, target, this.checkCollision);
             }
 
+            createAccelerationMissileWithEffect(attacker, target, info){
+                const pos = attacker.getCenter();
+                const px = pos.x;
+                const py = pos.y + attacker.height/2;
+                
+                //미사일 생성
+                const missile = this.missileGroup.createMultiple({
+                    frameQuantity:1,
+                    key:info.type,
+                    setXY:{x:px, y:py},
+                });
+
+                missile.forEach(m=>{
+                    m.setCircle(11);
+                    m.damage = info.damage;
+                    m.score = info.score;
+                    const targetPos = target.getCenter();
+                    this.scene.physics.accelerateToObject(m, target, info.speed / 2 , info.speed, info.speed);
+                    const trailer = new Trailer(this.scene, m);
+                });
+
+                //미사일 소멸 이벤트 트리거
+                Phaser.Actions.Call(missile, function (m) {
+                    m.body.onWorldBounds = true;
+                });
+
+                //충돌판정
+                this.scene.physics.add.overlap(missile, target, this.checkCollision);
+            }
+
             checkCollision(missile, defender){
                 defender.hit(missile);
             }
 
             removeAll(){
                 this.missileGroup.children.each(m=>m.destroy());
+            }
+
+        }
+
+        class Point {
+            constructor(x, y, time){
+                this.x = x;
+                this.y = y;
+                this.time = time;
+            }
+            decrease(){
+                this.time -= 1;
+            }
+            get alive(){
+                return this.time > 0;
+            }
+            get dead(){
+                return !this.alive;
+            }
+        }
+
+        class Trailer extends Phaser.GameObjects.Graphics{
+            constructor(scene, target) {
+                super(scene, target.x, target.y);
+
+                this.scene = scene;
+                this.target = target;
+
+                this.tails = [];
+                scene.add.existing(this);
+            }
+
+            preUpdate(){
+                console.log("update");
+                const center = this.target.getCenter();
+                this.addTail(center);
+                this.removeTail();
+                this.drawTail();
+            }
+
+            addTail(pos){
+                this.tails.push(new Point(pos.x, pos.y, 30));
+            }
+
+            removeTail(){
+                for(let index = 0; index < this.tails.length; index++){
+                    const point = this.tails[index];
+                    point.decrease();
+                    if(point.dead) {
+                        this.tails.splice(index, 1);
+                        index--;
+                    }
+                }
+            }
+
+            drawTail(){
+                const width = this.target.width / 2;
+                this.clear();
+                for(let i=6; i < this.tails.length; i++) {
+                    this.fillStyle(0xFFFFFF, 0.05);
+                    this.fillCircle(this.tails[i].x, this.tails[i].y, width - width / i);
+                }
+                this.strokePath();
+                this.closePath();
             }
 
         }
@@ -583,7 +680,7 @@
                     scale: { start: 0.1, end: 0.75, ease: "Cubic.easeOut" }
                 });
 
-                setTimeout(()=>{effect.explode()}, 50);
+                effect.explode();
             }
         }
 
@@ -604,6 +701,7 @@
                 this.load.image('player-advance-missile', 'assets/missile/orb-blue.png');
                 this.load.spritesheet('enemy-missile', 'assets/missile/balls.png', {frameWidth:17, frameHeight:17});
                 this.load.spritesheet('explosion', 'assets/particle/explosion.png', {frameWidth:130.5, frameHeight:130.5});
+                this.load.image('missile-tail', 'assets/particle/blue-40.png');
             }
             create(){
                 //점수판
