@@ -38,34 +38,32 @@
         }
 
         class LifeBox {
-            constructor(scene, x, y, hp){
+            constructor(scene, x, y, max, current){
                 this.box = scene.add.text(x, y, '', {fontSize:'30px', fill:'#FFF'}).setDepth(99999);
-                this.max = hp.max;
-                this.current = hp.current;
+                this.max = max;
+                this.current = current;
                 this.draw();
             }
 
+            get empty(){
+                return this.max - this.current;
+            }
+
             get formatted(){
-                const empty = '☆'.repeat(this.max - this.current);
+                const empty = '☆'.repeat(this.empty);
                 const fill = '★'.repeat(this.current);
                 return empty.concat(fill);
             }
 
-            plus(value){
-                this.current += value;
-                this.max = Math.max(this.current, this.max);
-                this.draw();
-            }
-
-            minus(value){
-                value = value || 1;
-                this.current -= value;
-                this.current = Math.max(0, this.current);
+            set value(v){
+                this.current = Math.max(0, v);
+                this.max = Math.max(v, this.max);
                 this.draw();
             }
 
             draw(){
                 this.box.setText(this.formatted);
+                console.log(this.formatted);
             }
         }
 
@@ -91,16 +89,10 @@
                 return this.currentHp * 100 / this.maxHp;
             }
 
-            decrease(amount){
-                this.currentHp -= amount;
-                
-                if(this.currentHp < 0){
-                    this.currentHp = 0;
-                }
-
+            set hp(value){
+                this.currentHp = Math.min(this.maxHp, value);
+                this.currentHp = Math.max(0, value);
                 this.draw();
-
-                return (this.currentHp === 0);
             }
 
             draw(){
@@ -151,7 +143,7 @@
                     calculate(){
                         const now = Date.now();
                         const diff = now - this.time;
-                        if(diff < 500){
+                        if(diff < 1000){
                             this.add();
                         }
                         else {
@@ -159,17 +151,34 @@
                         }
                         console.log(`${this.get()} combo`);
                         this.time = now;
+
+                        return this.count % 10 == 0;//bonus 획득 여부 반환(10combo 마다)
                     },
                     get(){
                         return this.count;
                     }
                 };
-                this.hp = {
+                this.life = {
                     max:3,
-                    current:3
+                    current:3,
+                    lifebox:new LifeBox(scene, 35, 75, 3, 3),
+                    get remain(){
+                        return this.current > 0;
+                    },
+                    get over(){
+                        return this.current == 0;
+                    },
+                    plus(){
+                        this.current += 1;
+                        this.max = Math.max(this.current, this.max);
+                        this.max = Math.min(this.max, 20);
+                        this.lifebox.value = this.current;
+                    },
+                    minus(){
+                        this.current = Math.max(0, this.current - 1);
+                        this.lifebox.value = this.current;
+                    },
                 };
-
-                this.lifebox = new LifeBox(scene, 35, 75, this.hp);
 
                 this.speed = 5;//스피드
 
@@ -190,7 +199,7 @@
             }
             preUpdate(time, delta){
                 //목숨이 있을 경우 이동처리
-                if(this.hp.current > 0){
+                if(this.life.remain){
                     const pointer = this.scene.input.activePointer;
                     if(pointer.isDown){//터치or마우스
                         const distance = Phaser.Math.Distance.Between(pointer.x, pointer.y, this.x, this.y);
@@ -213,7 +222,7 @@
 
             hit(missile){
                 // console.log("player hit");
-                if(this.hp.current == 0) return;
+                if(this.life.over) return;
 
                 const playerBounds = this.getBounds();
                 const missileBounds = missile.getBounds();
@@ -259,13 +268,12 @@
 
             damage(missile){
                 if(this.invincible) return;
-                if(this.hp.current == 0) return;
+                if(this.life.over) return;
 
                 //데미지 처리
                 if(!this.lastDamaged || current - this.lastDamaged > this.invincible * 1000) {
-                    this.hp.current -= missile.damage;
-                    this.lifebox.minus();
-                    console.log(`남은 목숨 : ${this.hp.current}`);
+                    this.life.minus();
+                    console.log(`남은 목숨 : ${this.life.current}`);
                 }
 
                 //타격 이미지 처리 + 무적 처리
@@ -278,7 +286,7 @@
                 missile.destroy();
 
                 //hp에 따른 처리
-                if(this.hp.current == 0){
+                if(this.life.over){
                     //게임 오버
                     console.log("게임오버");
                     //this.setTexture('player-damaged');
@@ -303,7 +311,11 @@
                 this.setTexture('player-base-attack');
 
                 //콤보 계산
-                this.combo.calculate();
+                const bonus = this.combo.calculate();
+                if(bonus){
+                    this.life.plus();
+                    console.log("bonus 증정");
+                }
 
                 const info = {
                     type : 'player-base-missile',
@@ -331,7 +343,10 @@
                 this.setTexture('player-advance-attack');
 
                 //콤보 계산
-                this.combo.calculate();
+                const bonus = this.combo.calculate();
+                if(bonus) {
+                    this.life.plus();
+                }
 
                 const info = {
                     type : 'player-advance-missile',
@@ -371,12 +386,27 @@
                 this.hp = {
                     max : 5000,
                     current : 5000,
+                    bar:new HPBar(scene, x, y-this.height/1.5, 5000, 5000),
                     get percent(){
                         return this.current * 100 / this.max;
                     },
                     get hitPercent(){
                         return (this.max - this.current) * 100 / this.max;
                     },
+                    get over(){
+                        return this.current <= 0;
+                    },
+                    get remain(){
+                        return this.current > 0;
+                    },
+                    plus(value){
+                        this.current = Math.min(this.current + value, this.max);
+                        this.bar.value = this.current;
+                    },
+                    minus(value){
+                        this.current = Math.max(0, this.current - value);
+                        this.bar.value = this.current;
+                    }
                 };
 
                 this.manager = {
@@ -428,7 +458,7 @@
                     ]
                 };
 
-                this.hpBar = new HPBar(scene, x, y-this.height/1.5, this.hp.max, this.hp.current);
+                
 
                 this.attack = {
                     damage:1,
@@ -451,7 +481,6 @@
                         //this.missile.createMissile(this.target);
                         
                         const level = Math.floor(this.hp.hitPercent / this.manager.stage.length);
-                        console.log(`난이도 : ${level}`);
                         this.manager.round(level).call();
                     }
                 }
@@ -463,11 +492,10 @@
 
             hit(missile){
                 //console.log("enemy hit");
-                if(this.hp.current <= 0) return;
+                if(this.hp.over) return;
                 
                 //데미지 처리 + 점수계산
-                this.hp.current -= missile.damage;
-                this.hpBar.decrease(missile.damage);
+                this.hp.minus(missile.damage);
                 console.log(`보스 체력 : ${this.hp.current} / ${this.hp.max}`);
 
                 this.scene.score.plus(missile.score);
@@ -831,6 +859,10 @@
                 });
 
                 effect.explode();
+            }
+
+            combo(xpos, ypos, value){
+                
             }
         }
 
