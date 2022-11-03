@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <style>
         html, body {
             margin:0;
@@ -548,7 +549,7 @@
                 
                 //미사일 생성
                 const missile = this.missileGroup.createMultiple({
-                    frameQuantity:1,
+                    frameQuantity:5,
                     key:info.type,
                     setXY:{x:px, y:py},
                 });
