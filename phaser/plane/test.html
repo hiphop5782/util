@@ -1,9 +1,12 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <style>
         html, body {
             margin:0;
+            background-color: black;
+            overflow: hidden;
         }
     </style>
     <title>Acrobatic Evasion</title>
@@ -166,7 +169,7 @@
                     current:3
                 };
 
-                this.lifebox = new LifeBox(scene, scene.physics.world.bounds.width - 175, 35, this.hp);
+                this.lifebox = new LifeBox(scene, 35, 75, this.hp);
 
                 this.speed = 5;//스피드
 
@@ -310,9 +313,9 @@
                 }
 
                 //미사일 생성
-                //this.missile.createTargetMissile(this, this.target, info);
-                //this.missile.createAccelerationMissile(this, this.target, info);
-                this.missile.createAccelerationMissileWithEffect(this, this.target, info);
+                //this.missile.createTargetToTargetLinearMissile(this, this.target, info);
+                //this.missile.createTargetToTargetAccelerationMissile(this, this.target, info);
+                this.missile.createTargetToTargetAccelerationMissileWithEffect(this, this.target, info);
 
                 //기체 원상태로 복구
                 setTimeout(()=>{
@@ -338,9 +341,9 @@
                 }
 
                 //미사일 생성
-                // this.missile.createTargetMissile(this, this.target, info);
-                // this.missile.createAccelerationMissile(this, this.target, info);
-                this.missile.createAccelerationMissileWithEffect(this, this.target, info);
+                // this.missile.createTargetToTargetLinearMissile(this, this.target, info);
+                // this.missile.createTargetToTargetAccelerationMissile(this, this.target, info);
+                this.missile.createTargetToTargetAccelerationMissileWithEffect(this, this.target, info);
 
                 //기체 원상태로 복구
                 setTimeout(()=>{
@@ -366,11 +369,63 @@
                 this.setDepth(2);
 
                 this.hp = {
-                    max : 10000,
-                    current : 10000,
+                    max : 5000,
+                    current : 5000,
                     get percent(){
                         return this.current * 100 / this.max;
                     },
+                    get hitPercent(){
+                        return (this.max - this.current) * 100 / this.max;
+                    },
+                };
+
+                this.manager = {
+                    round(v){
+                        return this.stage[v] || this.stage[this.stage.length-1];
+                    },
+                    stage:[
+                        ()=>{//stage 1
+                            this.missile.createLinearMissile(this.target, Direction.DOWN, this.attack.speed);
+                        },   
+                        ()=>{//stage 2
+                            this.missile.createLinearMissile(this.target, Direction.DOWN, this.attack.speed * 1.5);
+                        },  
+                        ()=>{//stage 3
+                            this.missile.createLinearMissile(this.target, Direction.DOWN, this.attack.speed * 2.25);
+                        },    
+                        ()=>{//stage 4
+                            this.missile.createLinearMissile(this.target, Direction.DOWN, this.attack.speed * 3);
+                        },    
+                        ()=>{//stage 5
+                            this.missile.createLinearMissile(this.target, Direction.DOWN, Phaser.Math.Between(this.attack.speed, this.attack.speed * 3));
+                        },    
+                        ()=>{//stage 6
+                            this.missile.createLinearMissile(this.target, Direction.DOWN, this.attack.speed);
+                            this.missile.createLinearMissile(this.target, Direction.RIGHT_DOWN, this.attack.speed);
+                        },    
+                        ()=>{//stage 7
+                            this.missile.createLinearMissile(this.target, Direction.DOWN, this.attack.speed);
+                            this.missile.createLinearMissile(this.target, Direction.LEFT_DOWN, this.attack.speed);
+                            this.missile.createLinearMissile(this.target, Direction.RIGHT_DOWN, this.attack.speed);
+                        },    
+                        ()=>{//stage 8
+                            this.missile.createLinearMissile(this.target, Direction.DOWN, Phaser.Math.Between(this.attack.speed, this.attack.speed * 2));
+                            this.missile.createLinearMissile(this.target, Direction.LEFT_DOWN, Phaser.Math.Between(this.attack.speed, this.attack.speed * 2));
+                            this.missile.createLinearMissile(this.target, Direction.RIGHT_DOWN, Phaser.Math.Between(this.attack.speed, this.attack.speed * 2));
+                        },    
+                        ()=>{//stage 9
+                            this.missile.createLinearMissile(this.target, Direction.DOWN, Phaser.Math.Between(this.attack.speed, this.attack.speed * 3));
+                            this.missile.createLinearMissile(this.target, Direction.LEFT_DOWN, Phaser.Math.Between(this.attack.speed, this.attack.speed * 3));
+                            this.missile.createLinearMissile(this.target, Direction.RIGHT_DOWN, Phaser.Math.Between(this.attack.speed, this.attack.speed * 3));
+                        },    
+                        ()=>{//stage 10
+                            this.missile.createAccelerationMissile(this.target, Direction.DOWN, Phaser.Math.Between(this.attack.speed / 2, this.attack.speed * 2));
+                        },    
+                        ()=>{//stage 11
+                            this.missile.createAccelerationMissile(this.target, Direction.DOWN, Phaser.Math.Between(this.attack.speed / 2, this.attack.speed  * 2));
+                            this.missile.createLinearMissile(this.target, Direction.RIGHT, this.attack.speed);
+                        },    
+                    ]
                 };
 
                 this.hpBar = new HPBar(scene, x, y-this.height/1.5, this.hp.max, this.hp.current);
@@ -378,7 +433,7 @@
                 this.attack = {
                     damage:1,
                     delay:5,
-                    speed:400,
+                    speed:200,
                 }
                 this.frameCount = 0;
 
@@ -394,12 +449,15 @@
                 if(++this.frameCount % this.attack.delay == 0){
                     if(this.target != null){
                         //this.missile.createMissile(this.target);
-                        this.missile.createLinearMissile(this.target, Direction.DOWN, this.attack.speed);
+                        
+                        const level = Math.floor(this.hp.hitPercent / this.manager.stage.length);
+                        console.log(level);
+                        this.manager.round(level).call();
                     }
                 }
             }
 
-            getDefaultTexture(){
+            get DefaultTexture(){
                 return this.hp.percent < 40 ? 'enemy-warning' : 'enemy-default';
             }
 
@@ -419,7 +477,7 @@
                 this.damageTime = Date.now();
                 setTimeout(()=>{
                     const diff = Date.now() - this.damageTime;
-                    if(diff > 499) this.setTexture(this.getDefaultTexture());
+                    if(diff > 499) this.setTexture(this.DefaultTexture);
                 }, 500);
 
                 //미사일 제거
@@ -541,14 +599,64 @@
 
             }
 
-            createTargetMissile(attacker, target, info){
+            createAccelerationMissile(target, angle, acc){
+                //각도에 따른 시작지점, 이동속도 계산
+                //우 : 0 , 상 : 90 , 좌 : 180 , 하 : 270
+
+                //선 생성(중심에서 시작하여 각도와 폭/높이로 계산)
+                const lineCenter = this.createLineByAngle(angle);
+                const lineMin = this.createLineByAngle(angle - 45);
+                const lineMax = this.createLineByAngle(angle + 45);
+
+                //반드시 1개의 충돌 포인트를 가짐
+                const center = Phaser.Geom.Intersects.GetLineToRectangle(lineCenter, this.mapRect)[0];
+
+                //랜덤을 위한 추가 계산(±45degree)
+                const min = Phaser.Geom.Intersects.GetLineToRectangle(lineMin, this.mapRect)[0];
+                const max = Phaser.Geom.Intersects.GetLineToRectangle(lineMax, this.mapRect)[0];
+
+                const line1 = new Phaser.Geom.Line(min.x, min.y, center.x, center.y);
+                const line2 = new Phaser.Geom.Line(center.x, center.y, max.x, max.y);
+                let point;
+                if(Phaser.Math.Between(1, 2) == 1)
+                    point = line1.getRandomPoint();
+                else
+                    point = line2.getRandomPoint();
+
+                //미사일 생성
+                const missile = this.missileGroup.createMultiple({
+                    frameQuantity:1,
+                    key:'enemy-missile',
+                    frame:[Phaser.Math.Between(0, 4)],
+                    setXY:{x:point.x, y:point.y},
+                });
+
+                const {vx, vy} = this.createVelocity(angle, acc);
+                missile.forEach(m=>{
+                    m.setCircle(8);
+                    m.damage = this.attack.damage;
+                    m.setAccelerationX(vx);
+                    m.setAccelerationY(vy);
+                });
+
+                //미사일 소멸 이벤트 트리거
+                Phaser.Actions.Call(missile, function (m) {
+                    m.body.onWorldBounds = true;
+                });
+
+                //충돌판정
+                this.scene.physics.add.overlap(missile, target, this.checkCollision);
+
+            }
+
+            createTargetToTargetLinearMissile(attacker, target, info){
                 const pos = attacker.getCenter();
                 const px = pos.x;
                 const py = pos.y + attacker.height/2;
                 
                 //미사일 생성
                 const missile = this.missileGroup.createMultiple({
-                    frameQuantity:1,
+                    frameQuantity:5,
                     key:info.type,
                     setXY:{x:px, y:py},
                 });
@@ -570,7 +678,7 @@
                 this.scene.physics.add.overlap(missile, target, this.checkCollision);
             }
 
-            createAccelerationMissile(attacker, target, info){
+            createTargetToTargetAccelerationMissile(attacker, target, info){
                 const pos = attacker.getCenter();
                 const px = pos.x;
                 const py = pos.y + attacker.height/2;
@@ -599,7 +707,7 @@
                 this.scene.physics.add.overlap(missile, target, this.checkCollision);
             }
 
-            createAccelerationMissileWithEffect(attacker, target, info){
+            createTargetToTargetAccelerationMissileWithEffect(attacker, target, info){
                 const pos = attacker.getCenter();
                 const px = pos.x;
                 const py = pos.y + attacker.height/2;
@@ -744,8 +852,14 @@
                 this.load.spritesheet('enemy-missile', 'assets/missile/balls.png', {frameWidth:17, frameHeight:17});
                 this.load.spritesheet('explosion', 'assets/particle/explosion.png', {frameWidth:130.5, frameHeight:130.5});
                 this.load.image('missile-tail', 'assets/particle/blue-40.png');
+                this.load.image('background', 'assets/background/space1.png');
             }
             create(){
+                //배경
+                this.background = this.add.tileSprite(0, 0, this.physics.world.bounds.width, this.physics.world.bounds.height, 'background')
+                                                                            .setOrigin(0)
+                                                                            .setScrollFactor(0, 1);
+
                 //점수판
                 this.score = new ScoreBox(this, 35, 35);
 
@@ -768,14 +882,21 @@
                 this.cameras.main.setZoom(1.05);
             }
 
+            update(){
+                this.background.tilePositionY -= 1;
+            }
+
             gameover(){
                 const screenCenterX = this.cameras.main.x + this.cameras.main.width / 2; 
                 const screenCenterY = this.cameras.main.y + this.cameras.main.height / 2;
-                this.ending = this.add.text(screenCenterX, screenCenterY, 'GAME OVER', {fontSize:'50px', fill:'#FFF', align:'center'}).setDepth(99999).setOrigin(0.5);
+                this.ending = this.add.text(screenCenterX, screenCenterY, 'GAME OVER\n\nclick to restart', {fontSize:'50px', fill:'#FFF', align:'center'}).setDepth(99999).setOrigin(0.5);
 
-                this.input.once('pointerdown', ()=>{
-                    this.scene.restart();
-                });
+                setTimeout(()=>{
+                    this.input.once('pointerdown', ()=>{
+                        this.scene.restart();
+                    });
+                }, 1000);
+                
             }
 
             gameclear(){
