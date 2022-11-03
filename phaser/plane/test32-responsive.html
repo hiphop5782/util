@@ -167,7 +167,7 @@
                     current:3
                 };
 
-                this.lifebox = new LifeBox(scene, scene.physics.world.bounds.width - 125, 35, this.hp);
+                this.lifebox = new LifeBox(scene, scene.physics.world.bounds.width - 175, 35, this.hp);
 
                 this.speed = 5;//스피드
 
@@ -783,8 +783,8 @@
 
         };
 
-        const screenWidth = window.screen.width;
-        const screenHeight = window.screen.height;
+        const screenWidth = window.innerWidth;
+        const screenHeight = window.innerHeight;
         console.log("화면", screenWidth, "x", screenHeight);
         
         const config = {
