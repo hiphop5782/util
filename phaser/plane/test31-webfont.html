@@ -7,7 +7,9 @@
         }
     </style>
     <title>클래스분할</title>
-    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>    
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 </head>
 <body>
     
@@ -41,8 +43,8 @@
             }
 
             get formatted(){
-                const empty = '♡'.repeat(this.max - this.current);
-                const fill = '♥'.repeat(this.current);
+                const empty = '☆'.repeat(this.max - this.current);
+                const fill = '★'.repeat(this.current);
                 return empty.concat(fill);
             }
 
@@ -164,7 +166,7 @@
                     current:3
                 };
 
-                this.lifebox = new LifeBox(scene, scene.physics.world.bounds.width - 100, 25, this.hp);
+                this.lifebox = new LifeBox(scene, scene.physics.world.bounds.width - 125, 35, this.hp);
 
                 this.speed = 5;//스피드
 
@@ -375,8 +377,8 @@
 
                 this.attack = {
                     damage:1,
-                    delay:10,
-                    speed:300,
+                    delay:5,
+                    speed:400,
                 }
                 this.frameCount = 0;
 
@@ -745,7 +747,7 @@
             }
             create(){
                 //점수판
-                this.score = new ScoreBox(this, 25, 25);
+                this.score = new ScoreBox(this, 35, 35);
 
                 //이펙터
                 this.effector = new Effector(this);
