@@ -30,6 +30,12 @@
             }
         }
 
+        class LifeBox {
+            constructor(scene, x, y, max, current){
+                this.box = scene.add.text(x, y);
+            }
+        }
+
         class HPBar {
             constructor(scene, x, y, max, current){
                 this.bar = new Phaser.GameObjects.Graphics(scene);
@@ -708,8 +714,6 @@
             create(){
                 //점수판
                 this.score = new ScoreBox(this, 25, 25);
-
-                //생명
 
                 //이펙터
                 this.effector = new Effector(this);
