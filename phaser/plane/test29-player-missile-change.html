@@ -337,8 +337,8 @@
 
                 this.attack = {
                     damage:1,
-                    delay:25,
-                    speed:200,
+                    delay:10,
+                    speed:300,
                 }
                 this.frameCount = 0;
 
@@ -628,7 +628,9 @@
             }
 
             preUpdate(){
-                console.log("update");
+                if(!this.target.active) {
+                    this.destroy();
+                }
                 const center = this.target.getCenter();
                 this.addTail(center);
                 this.removeTail();
