@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        html, body {
+            margin:0;
+        }
+    </style>
+    <title>클래스분할</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>    
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+</head>
+<body>
+    
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.51.0/dist/phaser-arcade-physics.min.js"></script>
+    <script type="text/babel">
+        class ScoreBox {
+            constructor(scene, x, y) {
+                this.score = 0;
+                this.box = scene.add.text(x, y, '', {fontSize:'30px', fill:'#FFF'}).setDepth(99999);
+                this.draw();
+            }
+            get scoreFormatted(){
+                return String(this.score).padStart(10, '0');
+            }
+            plus(score){
+                this.score += score;
+                this.draw();
+            }
+            draw(){
+                this.box.setText(this.scoreFormatted);
+            }
+        }
+
+        class LifeBox {
+            constructor(scene, x, y, hp){
+                this.box = scene.add.text(x, y, '', {fontSize:'30px', fill:'#FFF'}).setDepth(99999);
+                this.max = hp.max;
+                this.current = hp.current;
+                this.draw();
+            }
+
+            get formatted(){
+                const empty = '☆'.repeat(this.max - this.current);
+                const fill = '★'.repeat(this.current);
+                return empty.concat(fill);
+            }
+
+            plus(value){
+                this.current += value;
+                this.max = Math.max(this.current, this.max);
+                this.draw();
+            }
+
+            minus(value){
+                value = value || 1;
+                this.current -= value;
+                this.current = Math.max(0, this.current);
+                this.draw();
+            }
+
+            draw(){
+                this.box.setText(this.formatted);
+            }
+        }
+
+        class HPBar {
+            constructor(scene, x, y, max, current){
+                this.bar = new Phaser.GameObjects.Graphics(scene);
+                
+                this.width = 100;
+                this.height = 7;
+
+                this.maxHp = max;
+                this.currentHp = current;
+                
+                this.x = x - this.width / 2;
+                this.y = y;
+                
+                this.draw();
+
+                scene.add.existing(this.bar);
+            }
+
+            get percent(){
+                return this.currentHp * 100 / this.maxHp;
+            }
+
+            decrease(amount){
+                this.currentHp -= amount;
+                
+                if(this.currentHp < 0){
+                    this.currentHp = 0;
+                }
+
+                this.draw();
+
+                return (this.currentHp === 0);
+            }
+
+            draw(){
+                this.bar.clear();
+
+                this.bar.fillStyle(0x000000);
+                this.bar.fillRect(this.x + 2, this.y + 2, this.width, this.height);
+
+                if(this.percent < 30){
+                    this.bar.fillStyle(0xff0000);//red
+                }
+                else if(this.percent < 50){
+                    this.bar.fillStyle(0xffa500);//orange
+                }
+                else {
+                    this.bar.fillStyle(0x00ff00);//green
+                }
+
+                this.bar.fillRect(this.x + 2, this.y + 2, this.percent, this.height);
+            }
+        }
+
+        class Player extends Phaser.Physics.Arcade.Image {
+            constructor(scene, x, y) {
+                super(scene, x, y);
+
+                this.scene = scene;
+
+                this.target = null;
+
+                this.setTexture('player-default');//이미지 설정
+                this.setPosition(x, y);//위치 설정
+                this.setDepth(2);//z-index 설정
+
+                this.attack = {
+                    damage:10,
+                    speed:500,
+                };
+                this.combo = {
+                    count:1,
+                    time:Date.now(),
+                    clear(){
+                        this.count = 1;
+                    },
+                    add(){
+                        this.count++;
+                    },
+                    calculate(){
+                        const now = Date.now();
+                        const diff = now - this.time;
+                        if(diff < 500){
+                            this.add();
+                        }
+                        else {
+                            this.clear();
+                        }
+                        console.log(`${this.get()} combo`);
+                        this.time = now;
+                    },
+                    get(){
+                        return this.count;
+                    }
+                };
+                this.hp = {
+                    max:3,
+                    current:3
+                };
+
+                this.lifebox = new LifeBox(scene, scene.physics.world.bounds.width - 125, 35, this.hp);
+
+                this.speed = 5;//스피드
+
+                this.invincible = false;//무적 여부
+
+                this.key = {//이동키
+                    up : scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.UP),
+                    down : scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.DOWN),
+                    left : scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.LEFT),
+                    right : scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.RIGHT),
+                };
+
+                scene.add.existing(this);//화면 추가
+                scene.physics.add.existing(this);//물리엔진 추가
+                this.setCollideWorldBounds(true);//지도 안에 가두기
+
+                this.missile = new Missile(scene, this.attack.damage);
+            }
+            preUpdate(time, delta){
+                //목숨이 있을 경우 이동처리
+                if(this.hp.current > 0){
+                    const pointer = this.scene.input.activePointer;
+                    if(pointer.isDown){//터치or마우스
+                        const distance = Phaser.Math.Distance.Between(pointer.x, pointer.y, this.x, this.y);
+                        if(distance > this.speed){//떨림 보정용 조건
+                            const angle = Phaser.Math.Angle.Between(pointer.x, pointer.y, this.x, this.y);
+                            const dx = Math.cos(angle) * this.speed;
+                            const dy = Math.sin(angle) * this.speed;
+                            this.x -= dx;
+                            this.y -= dy;
+                        }
+                    }
+                    else {//키보드
+                        if(this.key.up.isDown) this.y -= this.speed;
+                        if(this.key.down.isDown) this.y += this.speed;
+                        if(this.key.left.isDown) this.x -= this.speed;
+                        if(this.key.right.isDown) this.x += this.speed;
+                    }
+                }
+            }
+
+            hit(missile){
+                // console.log("player hit");
+                if(this.hp.current == 0) return;
+
+                const playerBounds = this.getBounds();
+                const missileBounds = missile.getBounds();
+                const damageBounds = new Phaser.Geom.Rectangle(playerBounds.x + 29, playerBounds.y + 5, 6, 16);
+                const isDamage = Phaser.Geom.Intersects.RectangleToRectangle(damageBounds, missileBounds);
+                if(isDamage){
+                    this.damage(missile);
+                    return;
+                }
+
+                //2. 기본공격 판정 다각형을 사각형과 삼각형으로 분해하여 처리
+                const baseAttackBounds1 = new Phaser.Geom.Triangle(
+                    playerBounds.x + 10, playerBounds.y + 28,
+                    playerBounds.x + 54, playerBounds.y + 28,
+                    playerBounds.x + 32, playerBounds.y + 20
+                );
+                const baseAttackBounds2 = new Phaser.Geom.Rectangle(
+                    playerBounds.x + 10, 
+                    playerBounds.y + 28,
+                    playerBounds.width - 20,
+                    14
+                );
+
+                const isBaseAttack = missile.baseAttack !== true && (Phaser.Geom.Intersects.RectangleToTriangle(missileBounds, baseAttackBounds1) || Phaser.Geom.Intersects.RectangleToRectangle(missileBounds, baseAttackBounds2));
+                if(isBaseAttack){
+                    missile.baseAttack = true;
+                    this.baseAttack(missile);
+                }
+
+                //3. 확장공격 판정 - 다각형을 사각형으로 변경
+                const advanceAttackBounds = new Phaser.Geom.Rectangle(
+                    playerBounds.x + 25,
+                    playerBounds.y + 54,
+                    14,
+                    6
+                );
+                const isAdvanceAttack = !missile.advanceAttack && Phaser.Geom.Intersects.RectangleToTriangle(missileBounds, advanceAttackBounds);
+                if(isAdvanceAttack){
+                    missile.advanceAttack = true;
+                    this.advanceAttack(missile);
+                }
+            }
+
+            damage(missile){
+                if(this.invincible) return;
+                if(this.hp.current == 0) return;
+
+                //데미지 처리
+                if(!this.lastDamaged || current - this.lastDamaged > this.invincible * 1000) {
+                    this.hp.current -= missile.damage;
+                    this.lifebox.minus();
+                    console.log(`남은 목숨 : ${this.hp.current}`);
+                }
+
+                //타격 이미지 처리 + 무적 처리
+                this.damageTime = Date.now();
+                this.setTexture('player-damaged');
+                this.invincible = true;
+                
+                //미사일 제거
+                this.scene.effector.explode(missile.x, missile.y);
+                missile.destroy();
+
+                //hp에 따른 처리
+                if(this.hp.current == 0){
+                    //게임 오버
+                    console.log("게임오버");
+                    //this.setTexture('player-damaged');
+                    this.scene.gameover();
+                    this.missile.removeAll();
+                    this.destroy();
+                }
+                else {
+                    //1초 후 무적 + 타격효과 해제
+                    setTimeout(()=>{
+                        if(this.invincible) this.invincible = false;
+                        const diff = Date.now() - this.damageTime;
+                        if(diff > 999) {
+                            this.setTexture('player-default');
+                        }
+                    }, 1000);
+                }
+            }
+            baseAttack(missile){
+                //기체 변경 - 0.5초
+                this.lastBaseAttack = Date.now();
+                this.setTexture('player-base-attack');
+
+                //콤보 계산
+                this.combo.calculate();
+
+                const info = {
+                    type : 'player-base-missile',
+                    damage : this.attack.damage,
+                    score : this.combo.get() * this.attack.damage,
+                    speed : this.attack.speed
+                }
+
+                //미사일 생성
+                //this.missile.createTargetMissile(this, this.target, info);
+                //this.missile.createAccelerationMissile(this, this.target, info);
+                this.missile.createAccelerationMissileWithEffect(this, this.target, info);
+
+                //기체 원상태로 복구
+                setTimeout(()=>{
+                    const diff = Date.now() - this.lastBaseAttack;
+                    if(diff > 499) {
+                        this.setTexture('player-default');
+                    }
+                }, 500);
+            }
+            advanceAttack(missile){
+                //기체 변경 - 0.5초
+                this.lastAdvanceAttack = Date.now();
+                this.setTexture('player-advance-attack');
+
+                //콤보 계산
+                this.combo.calculate();
+
+                const info = {
+                    type : 'player-advance-missile',
+                    damage : this.attack.damage * 2,
+                    score : this.combo.get() * this.attack.damage * 2,
+                    speed : this.attack.speed
+                }
+
+                //미사일 생성
+                // this.missile.createTargetMissile(this, this.target, info);
+                // this.missile.createAccelerationMissile(this, this.target, info);
+                this.missile.createAccelerationMissileWithEffect(this, this.target, info);
+
+                //기체 원상태로 복구
+                setTimeout(()=>{
+                    const diff = Date.now() - this.lastAdvanceAttack;
+                    if(diff > 499){
+                        this.setTexture('player-default');
+                    }
+                }, 500);
+
+            }
+        }
+
+        class Enemy extends Phaser.Physics.Arcade.Image {
+            constructor(scene, x, y) {
+                super(scene, x, y);
+
+                this.scene = scene;
+
+                this.target = null;
+
+                this.setTexture('enemy-default');
+                this.setPosition(x, y);
+                this.setDepth(2);
+
+                this.hp = {
+                    max : 10000,
+                    current : 10000,
+                    get percent(){
+                        return this.current * 100 / this.max;
+                    },
+                };
+
+                this.hpBar = new HPBar(scene, x, y-this.height/1.5, this.hp.max, this.hp.current);
+
+                this.attack = {
+                    damage:1,
+                    delay:5,
+                    speed:400,
+                }
+                this.frameCount = 0;
+
+                scene.add.existing(this);//화면 추가
+                scene.physics.add.existing(this);//물리엔진 추가
+                this.setCollideWorldBounds(true);//지도 안에 가두기
+
+                //미사일
+                this.missile = new Missile(scene, this.attack.damage);
+            }
+            
+            preUpdate(time, delta){
+                if(++this.frameCount % this.attack.delay == 0){
+                    if(this.target != null){
+                        //this.missile.createMissile(this.target);
+                        this.missile.createLinearMissile(this.target, Direction.DOWN, this.attack.speed);
+                    }
+                }
+            }
+
+            getDefaultTexture(){
+                return this.hp.percent < 40 ? 'enemy-warning' : 'enemy-default';
+            }
+
+            hit(missile){
+                //console.log("enemy hit");
+                if(this.hp.current <= 0) return;
+                
+                //데미지 처리 + 점수계산
+                this.hp.current -= missile.damage;
+                this.hpBar.decrease(missile.damage);
+                console.log(`보스 체력 : ${this.hp.current} / ${this.hp.max}`);
+
+                this.scene.score.plus(missile.score);
+
+                //이미지 변경
+                this.setTexture('enemy-damaged');
+                this.damageTime = Date.now();
+                setTimeout(()=>{
+                    const diff = Date.now() - this.damageTime;
+                    if(diff > 499) this.setTexture(this.getDefaultTexture());
+                }, 500);
+
+                //미사일 제거
+                this.scene.effector.explode(missile.x, missile.y);
+                missile.destroy();
+
+                //보스 체력이 0이하면 게임 클리어
+                if(this.hp.current <= 0) {
+                    console.log("game clear");
+                    this.scene.gameclear();
+                    this.destroy();
+                }
+            }
+
+        }
+
+        class Direction {
+            static UP = 90;
+            static DOWN = 270;
+            static LEFT = 0;
+            static RIGHT  = 180;
+            static LEFT_DOWN = 315;
+            static RIGHT_DOWN = 225;
+            static LEFT_UP = 45;
+            static RIGHT_UP = 135;
+        }
+
+        class Missile extends Phaser.Physics.Arcade.Sprite {
+            constructor(scene, damage){
+                super(scene);
+
+                this.scene = scene;
+
+                this.attack = {
+                    damage:damage
+                };
+
+                //미사일 그룹 생성
+                this.missileGroup = scene.physics.add.group({
+                    defaultKey:"enemy-missile",
+                    collideWorldBounds:true,
+                });
+
+                //벽 충돌 시 소멸 이벤트 설정
+                scene.physics.world.on("worldbounds", function(body){
+                    body.gameObject.destroy();
+                });
+
+                this.mapWidth = scene.physics.world.bounds.width;
+                this.mapHeight = scene.physics.world.bounds.height;
+                const offset = 10;
+                this.mapRect = new Phaser.Geom.Rectangle(
+                    offset, offset, this.mapWidth - offset*2, this.mapHeight - offset*2);
+            }
+
+            createLineByAngle(angle) {
+                const rad = Phaser.Math.DegToRad(angle);       
+                const cx = this.scene.physics.world.bounds.centerX;
+                const cy = this.scene.physics.world.bounds.centerY;
+                const dx = cx + Math.cos(rad) * this.mapWidth;
+                const dy = cy + Math.sin(rad) * this.mapHeight;
+                return new Phaser.Geom.Line(cx, cy, dx, dy);
+            }
+
+            createVelocity(angle, speed){
+                const rad = Phaser.Math.DegToRad(angle);       
+                const vx = -Math.cos(rad) * speed;
+                const vy = -Math.sin(rad) * speed;
+                return {vx, vy};
+            }
+
+            createLinearMissile(target, angle, speed){
+                //각도에 따른 시작지점, 이동속도 계산
+                //우 : 0 , 상 : 90 , 좌 : 180 , 하 : 270
+
+                //선 생성(중심에서 시작하여 각도와 폭/높이로 계산)
+                const lineCenter = this.createLineByAngle(angle);
+                const lineMin = this.createLineByAngle(angle - 45);
+                const lineMax = this.createLineByAngle(angle + 45);
+
+                //반드시 1개의 충돌 포인트를 가짐
+                const center = Phaser.Geom.Intersects.GetLineToRectangle(lineCenter, this.mapRect)[0];
+
+                //랜덤을 위한 추가 계산(±45degree)
+                const min = Phaser.Geom.Intersects.GetLineToRectangle(lineMin, this.mapRect)[0];
+                const max = Phaser.Geom.Intersects.GetLineToRectangle(lineMax, this.mapRect)[0];
+
+                const line1 = new Phaser.Geom.Line(min.x, min.y, center.x, center.y);
+                const line2 = new Phaser.Geom.Line(center.x, center.y, max.x, max.y);
+                let point;
+                if(Phaser.Math.Between(1, 2) == 1)
+                    point = line1.getRandomPoint();
+                else
+                    point = line2.getRandomPoint();
+
+                //미사일 생성
+                const missile = this.missileGroup.createMultiple({
+                    frameQuantity:1,
+                    key:'enemy-missile',
+                    frame:[Phaser.Math.Between(0, 4)],
+                    setXY:{x:point.x, y:point.y},
+                });
+
+                const {vx, vy} = this.createVelocity(angle, speed);
+                missile.forEach(m=>{
+                    m.setCircle(8);
+                    m.damage = this.attack.damage;
+                    m.setVelocityX(vx);
+                    m.setVelocityY(vy);
+                });
+
+                //미사일 소멸 이벤트 트리거
+                Phaser.Actions.Call(missile, function (m) {
+                    m.body.onWorldBounds = true;
+                });
+
+                //충돌판정
+                this.scene.physics.add.overlap(missile, target, this.checkCollision);
+
+            }
+
+            createTargetMissile(attacker, target, info){
+                const pos = attacker.getCenter();
+                const px = pos.x;
+                const py = pos.y + attacker.height/2;
+                
+                //미사일 생성
+                const missile = this.missileGroup.createMultiple({
+                    frameQuantity:1,
+                    key:info.type,
+                    setXY:{x:px, y:py},
+                });
+
+                missile.forEach(m=>{
+                    m.setCircle(11);
+                    m.damage = info.damage;
+                    m.score = info.score;
+                    const targetPos = target.getCenter();
+                    this.scene.physics.moveTo(m, targetPos.x, targetPos.y, info.speed);
+                });
+
+                //미사일 소멸 이벤트 트리거
+                Phaser.Actions.Call(missile, function (m) {
+                    m.body.onWorldBounds = true;
+                });
+
+                //충돌판정
+                this.scene.physics.add.overlap(missile, target, this.checkCollision);
+            }
+
+            createAccelerationMissile(attacker, target, info){
+                const pos = attacker.getCenter();
+                const px = pos.x;
+                const py = pos.y + attacker.height/2;
+                
+                //미사일 생성
+                const missile = this.missileGroup.createMultiple({
+                    frameQuantity:1,
+                    key:info.type,
+                    setXY:{x:px, y:py},
+                });
+
+                missile.forEach(m=>{
+                    m.setCircle(11);
+                    m.damage = info.damage;
+                    m.score = info.score;
+                    const targetPos = target.getCenter();
+                    this.scene.physics.accelerateToObject(m, target, info.speed / 2 , info.speed, info.speed);
+                });
+
+                //미사일 소멸 이벤트 트리거
+                Phaser.Actions.Call(missile, function (m) {
+                    m.body.onWorldBounds = true;
+                });
+
+                //충돌판정
+                this.scene.physics.add.overlap(missile, target, this.checkCollision);
+            }
+
+            createAccelerationMissileWithEffect(attacker, target, info){
+                const pos = attacker.getCenter();
+                const px = pos.x;
+                const py = pos.y + attacker.height/2;
+                
+                //미사일 생성
+                const missile = this.missileGroup.createMultiple({
+                    frameQuantity:1,
+                    key:info.type,
+                    setXY:{x:px, y:py},
+                });
+
+                missile.forEach(m=>{
+                    m.setCircle(11);
+                    m.damage = info.damage;
+                    m.score = info.score;
+                    const targetPos = target.getCenter();
+                    this.scene.physics.accelerateToObject(m, target, info.speed / 2 , info.speed, info.speed);
+                    const trailer = new Trailer(this.scene, m);
+                });
+
+                //미사일 소멸 이벤트 트리거
+                Phaser.Actions.Call(missile, function (m) {
+                    m.body.onWorldBounds = true;
+                });
+
+                //충돌판정
+                this.scene.physics.add.overlap(missile, target, this.checkCollision);
+            }
+
+            checkCollision(missile, defender){
+                defender.hit(missile);
+            }
+
+            removeAll(){
+                this.missileGroup.children.each(m=>m.destroy());
+            }
+
+        }
+
+        class Point {
+            constructor(x, y, time){
+                this.x = x;
+                this.y = y;
+                this.time = time;
+            }
+            decrease(){
+                this.time -= 1;
+            }
+            get alive(){
+                return this.time > 0;
+            }
+            get dead(){
+                return !this.alive;
+            }
+        }
+
+        class Trailer extends Phaser.GameObjects.Graphics{
+            constructor(scene, target) {
+                super(scene, target.x, target.y);
+
+                this.scene = scene;
+                this.target = target;
+
+                this.tails = [];
+                scene.add.existing(this);
+            }
+
+            preUpdate(){
+                if(!this.target.active) {
+                    this.destroy();
+                }
+                const center = this.target.getCenter();
+                this.addTail(center);
+                this.removeTail();
+                this.drawTail();
+            }
+
+            addTail(pos){
+                this.tails.push(new Point(pos.x, pos.y, 30));
+            }
+
+            removeTail(){
+                for(let index = 0; index < this.tails.length; index++){
+                    const point = this.tails[index];
+                    point.decrease();
+                    if(point.dead) {
+                        this.tails.splice(index, 1);
+                        index--;
+                    }
+                }
+            }
+
+            drawTail(){
+                const width = this.target.width / 2;
+                this.clear();
+                for(let i=6; i < this.tails.length; i++) {
+                    this.fillStyle(0xFFFFFF, 0.05);
+                    this.fillCircle(this.tails[i].x, this.tails[i].y, width - width / i);
+                }
+                this.strokePath();
+                this.closePath();
+            }
+
+        }
+
+        class Effector {
+            constructor(scene){
+                //충돌용 emitter
+                this.explodeEffector = scene.add.particles("explosion");
+            }
+
+            explode(xpos, ypos){
+                const effect = this.explodeEffector.createEmitter({
+                    frame:1,
+                    blendMode: Phaser.BlendModes.SCREEN,
+                    x:xpos,
+                    y:ypos,
+                    frequency:0,
+                    alpha: { start: 1, end: 0, ease: "Cubic.easeIn" },
+                    scale: { start: 0.1, end: 0.75, ease: "Cubic.easeOut" }
+                });
+
+                effect.explode();
+            }
+        }
+
+        class Round extends Phaser.Scene {
+
+            constructor(){
+                super();
+            }
+            preload(){
+                this.load.image('player-default', 'assets/player3/test-default.png');
+                this.load.image('player-base-attack', 'assets/player3/test-base-attack.png');
+                this.load.image('player-advance-attack', 'assets/player3/test-advance-attack.png');
+                this.load.image('player-damaged', 'assets/player3/test-damaged.png');
+                this.load.image('enemy-default', 'assets/enemy2/round1-default.png');
+                this.load.image('enemy-warning', 'assets/enemy2/round1-warning.png');
+                this.load.image('enemy-damaged', 'assets/enemy2/round1-damaged.png');
+                this.load.image('player-base-missile', 'assets/missile/orb-green.png');
+                this.load.image('player-advance-missile', 'assets/missile/orb-blue.png');
+                this.load.spritesheet('enemy-missile', 'assets/missile/balls.png', {frameWidth:17, frameHeight:17});
+                this.load.spritesheet('explosion', 'assets/particle/explosion.png', {frameWidth:130.5, frameHeight:130.5});
+                this.load.image('missile-tail', 'assets/particle/blue-40.png');
+            }
+            create(){
+                //점수판
+                this.score = new ScoreBox(this, 35, 35);
+
+                //이펙터
+                this.effector = new Effector(this);
+
+                //플레이어
+                this.player = new Player(this, config.width/2, config.height - 125);
+                
+                //적
+                this.enemy = new Enemy(this, config.width/2, 120);
+
+                //타겟 설정
+                this.player.target = this.enemy;
+                this.enemy.target = this.player;
+
+                //카메라 설정
+                this.cameras.main.setBounds(0, 0, 800, 700);
+                this.cameras.main.centerOn(0, 0);
+                this.cameras.main.setZoom(1.05);
+            }
+
+            gameover(){
+                const screenCenterX = this.cameras.main.x + this.cameras.main.width / 2; 
+                const screenCenterY = this.cameras.main.y + this.cameras.main.height / 2;
+                this.ending = this.add.text(screenCenterX, screenCenterY, 'GAME OVER', {fontSize:'50px', fill:'#FFF', align:'center'}).setDepth(99999).setOrigin(0.5);
+            }
+
+            gameclear(){
+                const screenCenterX = this.cameras.main.x + this.cameras.main.width / 2; 
+                const screenCenterY = this.cameras.main.y + this.cameras.main.height / 2;
+                this.ending = this.add.text(screenCenterX, screenCenterY, 'GAME CLEAR', {fontSize:'50px', fill:'#0FF', align:'center'}).setDepth(99999).setOrigin(0.5);
+            }     
+
+        };
+
+        const screenWidth = window.screen.width;
+        const screenHeight = window.screen.height;
+        
+        const config = {
+            type: Phaser.AUTO,                    
+            width: screenWidth,
+            height: screenHeight,
+            // pixelArt:true,
+            scale:{
+                mode:Phaser.Scale.FIT,
+                parent:'phaser-example',
+                autoCenter:Phaser.Scale.CENTER_BOTH,
+                width:screenWidth,
+                height:screenHeight
+            },
+            physics:{
+                default:'arcade',
+                arcade: {
+                    gravity: { 
+                        x:0,
+                        y:0
+                    },
+                    //debug: true,
+                }
+            },
+            scene: [Round]
+        };
+
+        const game = new Phaser.Game(config);
+    </script>
+
+</body>
+</html>
