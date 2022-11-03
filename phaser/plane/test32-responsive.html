@@ -781,18 +781,21 @@
             }     
 
         };
+
+        const screenWidth = window.screen.width;
+        const screenHeight = window.screen.height;
         
-        var config = {
+        const config = {
             type: Phaser.AUTO,                    
-            width: 800,
-            height: 1000,
+            width: screenWidth,
+            height: screenHeight,
             // pixelArt:true,
             scale:{
                 mode:Phaser.Scale.FIT,
                 parent:'phaser-example',
                 autoCenter:Phaser.Scale.CENTER_BOTH,
-                width:800,
-                height:1000
+                width:screenWidth,
+                height:screenHeight
             },
             physics:{
                 default:'arcade',
