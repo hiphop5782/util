@@ -19,6 +19,37 @@
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.51.0/dist/phaser-arcade-physics.min.js"></script>
     <script type="text/babel">
+        class ComboBox {
+            constructor(scene, x, y) {
+                this.scene = scene;
+                this.x = x;
+                this.y = y;
+            }
+            combo(value) {
+                const textbox = this.scene.add.text(this.x, this.y, value+" Combo", {fontSize:'20px', fill:'#fff'});
+                this.scene.tweens.add({
+                    targets:textbox,
+                    alpha:0,
+                    duration:1000,
+                    repeat:0,
+                    yoyo:false,
+                    ease:'Linear',
+                    y:'-=10'
+                });
+            }
+            bonus(){
+                const textbox = this.scene.add.text(this.x, this.y+30, 'Bonus!!!', {fontSize:'20px', fill:'#ff0'});
+                this.scene.tweens.add({
+                    targets:textbox,
+                    alpha:0,
+                    duration:1000,
+                    repeat:0,
+                    yoyo:false,
+                    ease:'Linear',
+                    y:'-=10'
+                });
+            }
+        }
         class ScoreBox {
             constructor(scene, x, y) {
                 this.score = 0;
@@ -134,11 +165,16 @@
                 this.combo = {
                     count:1,
                     time:Date.now(),
+                    box:new ComboBox(scene, 35, 130),
                     clear(){
                         this.count = 1;
                     },
                     add(){
                         this.count++;
+                        this.box.combo(this.count);
+                    },
+                    bonus(){
+                        this.box.bonus();
                     },
                     calculate(){
                         const now = Date.now();
@@ -152,7 +188,12 @@
                         console.log(`${this.get()} combo`);
                         this.time = now;
 
-                        return this.count % 10 == 0;//bonus 획득 여부 반환(10combo 마다)
+                        //bonus 획득 여부 반환(10combo 마다)
+                        if(this.count % 10 == 0){
+                            this.bonus();
+                            return true;
+                        }
+                        return false;
                     },
                     get(){
                         return this.count;
