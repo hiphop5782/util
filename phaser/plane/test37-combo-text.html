@@ -34,7 +34,10 @@
                     repeat:0,
                     yoyo:false,
                     ease:'Linear',
-                    y:'-=10'
+                    y:'-=10',
+                    onComplete:function(e, target){
+                        target[0].destroy()
+                    },
                 });
             }
             bonus(){

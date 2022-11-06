@@ -9,7 +9,7 @@
             overflow: hidden;
         }
     </style>
-    <title>Acrobatic Evasion</title>
+    <title>클래스분할</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>    
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
@@ -34,7 +34,10 @@
                     repeat:0,
                     yoyo:false,
                     ease:'Linear',
-                    y:'-=10'
+                    y:'-=10',
+                    onComplete:function(e, target){
+                        target[0].destroy()
+                    },
                 });
             }
             bonus(){
@@ -46,7 +49,10 @@
                     repeat:0,
                     yoyo:false,
                     ease:'Linear',
-                    y:'-=10'
+                    y:'-=10',
+                    onComplete:function(e, target){
+                        target[0].destroy()
+                    },
                 });
             }
         }
@@ -499,6 +505,8 @@
                     ]
                 };
 
+                
+
                 this.attack = {
                     damage:1,
                     delay:5,
@@ -515,11 +523,10 @@
             }
             
             preUpdate(time, delta){
-                //폭 1920px을 기준으로 비율에 따라 처리
-                const judge = ++this.frameCount % Math.floor(this.attack.delay * (1920 / this.scene.cameras.main.width));
-                if(judge == 0){
+                if(++this.frameCount % this.attack.delay == 0){
                     if(this.target != null){
                         //this.missile.createMissile(this.target);
+                        
                         const level = Math.floor(this.hp.hitPercent / this.manager.stage.length);
                         this.manager.round(level).call();
                     }
@@ -927,15 +934,10 @@
                         urls:['https://fonts.googleapis.com/css2?family=Luckiest+Guy&display=swap']
                     },
                     active:function(){
-                        const {x, y, width, height} = screen.cameras.main;
-                        const cx = x + width / 2; 
-                        const cy = y + height / 2;
-                        const titleFontSize = Math.min(100, width / 10 * 1.5);
-                        const detailFontSize = Math.min(60, width / 20 * 1.5);
-                        const title = screen.add.text(cx, height * 1 / 4, 'Acrobatic\nEvasion', {fontFamily:'Luckiest Guy', fill:"#fff", align:"center"})
-                                                    .setFontSize(titleFontSize).setOrigin(0.5).setDepth(99999);
-                        const detail = screen.add.text(cx, height * 3 / 4, 'Click to start', {fontFamily:'Luckiest Guy', fill:"#ccc"})
-                                                    .setFontSize(detailFontSize).setOrigin(0.5).setDepth(99999);
+                        const screenCenterX = screen.cameras.main.x + screen.cameras.main.width / 2; 
+                        const screenCenterY = screen.cameras.main.y + screen.cameras.main.height / 4;
+                        const title = screen.add.text(screenCenterX, screenCenterY, 'Acrobatic\nEvasion', {fontFamily:'Luckiest Guy', fontSize:"100px", fill:"#fff", align:"center"}).setOrigin(0.5).setDepth(99999);
+                        const detail = screen.add.text(screenCenterX, screen.cameras.main.height * 3 / 4, 'Click to start', {fontFamily:'Luckiest Guy', fontSize:"50px", fill:"#ccc"}).setOrigin(0.5).setDepth(99999);
                         screen.tweens.add({
                             targets:detail,
                             alpha:0,
@@ -1009,23 +1011,9 @@
             }
 
             gameover(){
-                const {x, y, width, height} = this.cameras.main;
-                const cx = x + width / 2;
-                const cy = y + height / 2;
-                const titleFontSize = Math.min(100, width / 10 * 1.5);
-                const detailFontSize = Math.min(40, width / 20 * 1.5);
-                const title = this.add.text(cx, height * 1 / 4, 'GAME OVER', {fontFamily:'Luckiest Guy', fill:'#FFF'})
-                                            .setFontSize(titleFontSize).setDepth(99999).setOrigin(0.5);
-                const detail = this.add.text(cx, height * 3 / 4, 'Click to restart', {fontFamily:'Luckiest Guy', fill:"#ccc"})
-                                            .setFontSize(detailFontSize).setOrigin(0.5).setDepth(99999);
-                this.tweens.add({
-                    targets:detail,
-                    alpha:0,
-                    duration:1000,
-                    repeat:-1,
-                    yoyo:true,
-                    ease:'EaseInOut',
-                });                            
+                const screenCenterX = this.cameras.main.x + this.cameras.main.width / 2; 
+                const screenCenterY = this.cameras.main.y + this.cameras.main.height / 2;
+                this.ending = this.add.text(screenCenterX, screenCenterY, 'GAME OVER\n\nclick to restart', {fontSize:'50px', fill:'#FFF', align:'center'}).setDepth(99999).setOrigin(0.5);
 
                 setTimeout(()=>{
                     this.input.once('pointerdown', ()=>{
