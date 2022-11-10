@@ -15,6 +15,74 @@
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 </head>
 <body>
+
+    <!-- firebase -->
+    <script src="https://www.gstatic.com/firebasejs/8.8.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.8.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.8.1/firebase-analytics.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.8.1/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.8.1/firebase-database.js"></script>
+    <script type="module">
+        const firebaseConfig = {
+        apiKey: "AIzaSyA1CDxSR2ss2D0k6K59dj6IKPZhoqh6c6I",
+        authDomain: "acrobatic-evasion.firebaseapp.com",
+        databaseURL: "https://acrobatic-evasion-default-rtdb.asia-southeast1.firebasedatabase.app",
+        projectId: "acrobatic-evasion",
+        storageBucket: "acrobatic-evasion.appspot.com",
+        messagingSenderId: "576444993460",
+        appId: "1:576444993460:web:1026a1dbd4668be324ece1",
+        measurementId: "G-KW9H14DMWB"
+        };
+    
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+
+        window.database = firebase.database();
+        window.rankDB = database.ref().child("rank");
+        window.rank = {
+            data:[],
+            head(){
+                return "    NAME  SCORE\n";
+            },
+            line(item){
+                return String(item.rank).padStart(3, ' ') + " " + item.name.padEnd(5, ' ') + " " + String(item.score).padStart(7, '0') + "\n";
+            },
+            rank(){
+                const copy = [...this.data];
+                for(let i=0; i < copy.length; i++){
+                    copy[i].rank = 1;
+                    for(let k=0; k < copy.length; k++){
+                        if(copy[i].score < copy[k].score) copy[i].rank++;
+                    }
+                }
+                return copy.sort((a,b)=>a.rank-b.rank);
+            },
+            get str(){
+                const copy = this.rank();
+                let text = this.head();
+                const idx = copy.findIndex(e=>e.key===window.currentData);
+                copy.slice(0,5).forEach((d, i)=>{
+                    if(idx == i) text += "-----------------\n";
+                    text += this.line(d);
+                    if(idx == i) text += "-----------------\n";
+                });
+                if(idx >= 5) {
+                    text += "-----------------\n";
+                    text += this.line(copy[idx]);
+                }
+                return text;
+            }
+        };
+        // rankDB.orderByChild("score").limitToLast(5).once('value', (snapshot)=>{
+        //     snapshot.forEach((c)=>{
+        //         rank.data.push(c.val());
+        //     });
+        // })
+        rankDB.on("child_added", (data)=>{
+            const d = {key:data.key, ...data.val()};
+            rank.data.push(d);
+        });
+    </script>
     
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.51.0/dist/phaser-arcade-physics.min.js"></script>
@@ -34,7 +102,10 @@
                     repeat:0,
                     yoyo:false,
                     ease:'Linear',
-                    y:'-=10'
+                    y:'-=10',
+                    onComplete:function(e, target){
+                        target[0].destroy()
+                    },
                 });
             }
             bonus(){
@@ -46,7 +117,10 @@
                     repeat:0,
                     yoyo:false,
                     ease:'Linear',
-                    y:'-=10'
+                    y:'-=10',
+                    onComplete:function(e, target){
+                        target[0].destroy()
+                    },
                 });
             }
         }
@@ -65,6 +139,9 @@
             }
             draw(){
                 this.box.setText(this.scoreFormatted);
+            }
+            get value(){
+                return this.score;
             }
         }
 
@@ -923,18 +1000,25 @@
                 const screen = this;
                 WebFont.load({
                     custom:{
-                        families:['Luckiest Guy'],
-                        urls:['https://fonts.googleapis.com/css2?family=Luckiest+Guy&display=swap']
+                        families:[
+                            'Luckiest Guy',
+                            'Azeret Mono'
+                        ],
+                        urls:[
+                            'https://fonts.googleapis.com/css2?family=Luckiest+Guy&display=swap',
+                            'https://fonts.googleapis.com/css2?family=Azeret+Mono&display=swap'
+                        ]
                     },
                     active:function(){
                         const {x, y, width, height} = screen.cameras.main;
                         const cx = x + width / 2; 
                         const cy = y + height / 2;
                         const titleFontSize = Math.min(100, width / 10 * 1.5);
+                        const rankFontSize = Math.min(60, width / 20 * 1.2);
                         const detailFontSize = Math.min(60, width / 20 * 1.5);
-                        const title = screen.add.text(cx, height * 1 / 4, 'Acrobatic\nEvasion', {fontFamily:'Luckiest Guy', fill:"#fff", align:"center"})
+                        const title = screen.add.text(cx, height * 1 / 6, 'Acrobatic\nEvasion', {fontFamily:'Luckiest Guy', fill:"#fff", align:"center"})
                                                     .setFontSize(titleFontSize).setOrigin(0.5).setDepth(99999);
-                        const detail = screen.add.text(cx, height * 3 / 4, 'Click to start', {fontFamily:'Luckiest Guy', fill:"#ccc"})
+                        const detail = screen.add.text(cx, height * 5 / 6, 'Click to start', {fontFamily:'Luckiest Guy', fill:"#ccc"})
                                                     .setFontSize(detailFontSize).setOrigin(0.5).setDepth(99999);
                         screen.tweens.add({
                             targets:detail,
@@ -1009,14 +1093,26 @@
             }
 
             gameover(){
+                while(true){
+                    const name = window.prompt("이름을 입력하세요(5글자이내 영어,숫자,특수문자)");
+                    if(/^[A-Za-z0-9-_!@#$%\^*\(\)\+\=&\s,\.]{1,5}$/.test(name)){
+                        const result = window.rankDB.push({name:name, score:this.score.value});
+                        window.currentData = result.key;
+                        break;
+                    }
+                }
+
                 const {x, y, width, height} = this.cameras.main;
                 const cx = x + width / 2;
                 const cy = y + height / 2;
                 const titleFontSize = Math.min(100, width / 10 * 1.5);
                 const detailFontSize = Math.min(40, width / 20 * 1.5);
-                const title = this.add.text(cx, height * 1 / 4, 'GAME OVER', {fontFamily:'Luckiest Guy', fill:'#FFF'})
+                const title = this.add.text(cx, height * 1 / 6, 'GAME OVER', {fontFamily:'Luckiest Guy', fill:'#FFF'})
                                             .setFontSize(titleFontSize).setDepth(99999).setOrigin(0.5);
-                const detail = this.add.text(cx, height * 3 / 4, 'Click to restart', {fontFamily:'Luckiest Guy', fill:"#ccc"})
+                const rank = this.add.text(cx, height * 3 / 6, window.rank.str, {fontFamily:'Azeret Mono', fill:'#FFF'})
+                                            .setFontSize(detailFontSize).setDepth(99999).setOrigin(0.5);
+                console.log(rank);
+                const detail = this.add.text(cx, height * 5 / 6, 'Click to restart', {fontFamily:'Luckiest Guy', fill:"#ccc"})
                                             .setFontSize(detailFontSize).setOrigin(0.5).setDepth(99999);
                 this.tweens.add({
                     targets:detail,
