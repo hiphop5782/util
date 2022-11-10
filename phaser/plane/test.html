@@ -59,7 +59,7 @@
             },
             get str(){
                 const copy = this.rank();
-                let text = this.head();
+                let text = "";
                 const idx = copy.findIndex(e=>e.key===window.currentData);
                 copy.slice(0,5).forEach((d, i)=>{
                     if(idx == i) text += "-----------------\n";
