@@ -45,7 +45,7 @@
                 return "    NAME  SCORE\n";
             },
             line(item){
-                return String(item.rank).padStart(3, ' ') + " " + item.name.padEnd(5, ' ') + " " + String(item.score).padStart(7, '0') + "\n";
+                return String(item.rank).padStart(3, ' ') + " " + item.name.padEnd(5, ' ') + " " + String(item.score).padStart(7, '0');
             },
             rank(){
                 const copy = [...this.data];
@@ -62,13 +62,18 @@
                 let text = "";
                 const idx = copy.findIndex(e=>e.key===window.currentData);
                 copy.slice(0,5).forEach((d, i)=>{
-                    if(idx == i) text += "-----------------\n";
-                    text += this.line(d);
-                    if(idx == i) text += "-----------------\n";
+                    if(idx == i) {
+                        text += "-------------------\n";
+                        text += ">"+this.line(d)+"<"+"\n";
+                        text += "-------------------\n";
+                    }
+                    else {
+                        text += " "+this.line(d)+" "+"\n";
+                    }
                 });
                 if(idx >= 5) {
-                    text += "-----------------\n";
-                    text += this.line(copy[idx]);
+                    text += "-------------------\n";
+                    text += ">"+this.line(copy[idx])+"<"+"\n";
                 }
                 return text;
             }
