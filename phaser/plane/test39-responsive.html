@@ -9,7 +9,7 @@
             overflow: hidden;
         }
     </style>
-    <title>Acrobatic Evasion</title>
+    <title>클래스분할</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>    
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
@@ -34,7 +34,10 @@
                     repeat:0,
                     yoyo:false,
                     ease:'Linear',
-                    y:'-=10'
+                    y:'-=10',
+                    onComplete:function(e, target){
+                        target[0].destroy()
+                    },
                 });
             }
             bonus(){
@@ -46,7 +49,10 @@
                     repeat:0,
                     yoyo:false,
                     ease:'Linear',
-                    y:'-=10'
+                    y:'-=10',
+                    onComplete:function(e, target){
+                        target[0].destroy()
+                    },
                 });
             }
         }
