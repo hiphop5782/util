@@ -199,7 +199,7 @@
                 return this.currentHp * 100 / this.maxHp;
             }
 
-            set hp(value){
+            set value(value){
                 this.currentHp = Math.min(this.maxHp, value);
                 this.currentHp = Math.max(0, value);
                 this.draw();
