@@ -1097,6 +1097,7 @@
             gameover(){
                 while(true){
                     const name = window.prompt("이름을 입력하세요(5글자이내 영어,숫자,특수문자)");
+                    if(name == undefined) break;
                     if(/^[A-Za-z0-9-_!@#$%\^*\(\)\+\=&\s,\.]{1,5}$/.test(name)){
                         const result = window.rankDB.push({name:name, score:this.score.value});
                         window.currentData = result.key;

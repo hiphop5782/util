@@ -15,14 +15,16 @@
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 </head>
 <body>
-
     <!-- firebase -->
-    <script src="https://www.gstatic.com/firebasejs/8.8.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.8.1/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.8.1/firebase-analytics.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.8.1/firebase-firestore.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.8.1/firebase-database.js"></script>
     <script type="module">
+        // Import the functions you need from the SDKs you need
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.13.0/firebase-app.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/9.13.0/firebase-analytics.js";
+        // TODO: Add SDKs for Firebase products that you want to use
+        // https://firebase.google.com/docs/web/setup#available-libraries
+    
+        // Your web app's Firebase configuration
+        // For Firebase JS SDK v7.20.0 and later, measurementId is optional
         const firebaseConfig = {
         apiKey: "AIzaSyA1CDxSR2ss2D0k6K59dj6IKPZhoqh6c6I",
         authDomain: "acrobatic-evasion.firebaseapp.com",
@@ -35,60 +37,13 @@
         };
     
         // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
-
-        window.database = firebase.database();
-        window.rankDB = database.ref().child("rank");
-        window.rank = {
-            data:[],
-            head(){
-                return "    NAME  SCORE\n";
-            },
-            line(item){
-                return String(item.rank).padEnd(4, ' ') + " " + item.name.padEnd(5, ' ') + " " + String(item.score).padStart(7, '0');
-            },
-            rank(){
-                const copy = [...this.data];
-                for(let i=0; i < copy.length; i++){
-                    copy[i].rank = 1;
-                    for(let k=0; k < copy.length; k++){
-                        if(copy[i].score < copy[k].score) copy[i].rank++;
-                    }
-                }
-                return copy.sort((a,b)=>a.rank-b.rank);
-            },
-            get str(){
-                const copy = this.rank();
-                let text = "";
-                const idx = copy.findIndex(e=>e.key===window.currentData);
-                copy.slice(0,5).forEach((d, i)=>{
-                    if(idx == i) {
-                        text += "--------------------\n";
-                        text += ">"+this.line(d)+"<"+"\n";
-                        text += "--------------------\n";
-                    }
-                    else {
-                        text += " "+this.line(d)+" "+"\n";
-                    }
-                });
-                if(idx >= 5) {
-                    text += "--------------------\n";
-                    text += ">"+this.line(copy[idx])+"<"+"\n";
-                }
-                return text;
-            }
-        };
-        // rankDB.orderByChild("score").limitToLast(5).once('value', (snapshot)=>{
-        //     snapshot.forEach((c)=>{
-        //         rank.data.push(c.val());
-        //     });
-        // })
-        rankDB.on("child_added", (data)=>{
-            const d = {key:data.key, ...data.val()};
-            rank.data.push(d);
-        });
+        const app = initializeApp(firebaseConfig);
+        const analytics = getAnalytics(app);
+        
+        console.log(app);
     </script>
-    
+
+    <!-- game -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.51.0/dist/phaser-arcade-physics.min.js"></script>
     <script type="text/babel">
@@ -99,7 +54,7 @@
                 this.y = y;
             }
             combo(value) {
-                const textbox = this.scene.add.text(this.x, this.y, value+" Combo", {fontFamily:'Luckiest Guy', fontSize:'20px', fill:'#fff'});
+                const textbox = this.scene.add.text(this.x, this.y, value+" Combo", {fontSize:'20px', fill:'#fff'});
                 this.scene.tweens.add({
                     targets:textbox,
                     alpha:0,
@@ -107,14 +62,11 @@
                     repeat:0,
                     yoyo:false,
                     ease:'Linear',
-                    y:'-=10',
-                    onComplete:function(e, target){
-                        target[0].destroy()
-                    },
+                    y:'-=10'
                 });
             }
             bonus(){
-                const textbox = this.scene.add.text(this.x, this.y+30, 'Bonus!!!', {fontFamily:'Luckiest Guy', fontSize:'20px', fill:'#ff0'});
+                const textbox = this.scene.add.text(this.x, this.y+30, 'Bonus!!!', {fontSize:'20px', fill:'#ff0'});
                 this.scene.tweens.add({
                     targets:textbox,
                     alpha:0,
@@ -122,17 +74,14 @@
                     repeat:0,
                     yoyo:false,
                     ease:'Linear',
-                    y:'-=10',
-                    onComplete:function(e, target){
-                        target[0].destroy()
-                    },
+                    y:'-=10'
                 });
             }
         }
         class ScoreBox {
             constructor(scene, x, y) {
                 this.score = 0;
-                this.box = scene.add.text(x, y, '', {fontFamily:'Luckiest Guy', fontSize:'30px', fill:'#FFF'}).setDepth(99999);
+                this.box = scene.add.text(x, y, '', {fontSize:'30px', fill:'#FFF'}).setDepth(99999);
                 this.draw();
             }
             get scoreFormatted(){
@@ -145,14 +94,11 @@
             draw(){
                 this.box.setText(this.scoreFormatted);
             }
-            get value(){
-                return this.score;
-            }
         }
 
         class LifeBox {
             constructor(scene, x, y, max, current){
-                this.box = scene.add.text(x, y, '', {fontFamily:'Luckiest Guy', fontSize:'30px', fill:'#FFF'}).setDepth(99999);
+                this.box = scene.add.text(x, y, '', {fontSize:'30px', fill:'#FFF'}).setDepth(99999);
                 this.max = max;
                 this.current = current;
                 this.draw();
@@ -581,6 +527,8 @@
                     ]
                 };
 
+                
+
                 this.attack = {
                     damage:1,
                     delay:5,
@@ -597,11 +545,10 @@
             }
             
             preUpdate(time, delta){
-                //폭 1920px을 기준으로 비율에 따라 처리
-                const judge = ++this.frameCount % Math.floor(this.attack.delay * (1920 / this.scene.cameras.main.width));
-                if(judge == 0){
+                if(++this.frameCount % this.attack.delay == 0){
                     if(this.target != null){
                         //this.missile.createMissile(this.target);
+                        
                         const level = Math.floor(this.hp.hitPercent / this.manager.stage.length);
                         this.manager.round(level).call();
                     }
@@ -988,67 +935,10 @@
             }
         }
 
-        class Loading extends Phaser.Scene {
-            constructor(){
-                super('loading');
-            }
-
-            preload(){
-                this.load.image('background', 'assets/background/space1.png');
-                this.load.script('webfont', 'https://ajax.googleapis.com/ajax/libs/webfont/1.6.26/webfont.js');
-            }
-            create(){
-                this.background = this.add.tileSprite(0, 0, this.physics.world.bounds.width, this.physics.world.bounds.height, 'background')
-                                                    .setOrigin(0)
-                                                    .setScrollFactor(0, 1);
-                                                    
-                const screen = this;
-                WebFont.load({
-                    custom:{
-                        families:[
-                            'Luckiest Guy',
-                            'Azeret Mono'
-                        ],
-                        urls:[
-                            'https://fonts.googleapis.com/css2?family=Luckiest+Guy&display=swap',
-                            'https://fonts.googleapis.com/css2?family=Azeret+Mono&display=swap'
-                        ]
-                    },
-                    active:function(){
-                        const {x, y, width, height} = screen.cameras.main;
-                        const cx = x + width / 2; 
-                        const cy = y + height / 2;
-                        const titleFontSize = Math.min(100, width / 10 * 1.5);
-                        const rankFontSize = Math.min(60, width / 20 * 1.2);
-                        const detailFontSize = Math.min(60, width / 20 * 1.5);
-                        const title = screen.add.text(cx, height * 1 / 6, 'Acrobatic\nEvasion', {fontFamily:'Luckiest Guy', fill:"#fff", align:"center"})
-                                                    .setFontSize(titleFontSize).setOrigin(0.5).setDepth(99999);
-                        const detail = screen.add.text(cx, height * 5 / 6, 'Click to start', {fontFamily:'Luckiest Guy', fill:"#ccc"})
-                                                    .setFontSize(detailFontSize).setOrigin(0.5).setDepth(99999);
-                        screen.tweens.add({
-                            targets:detail,
-                            alpha:0,
-                            duration:1000,
-                            repeat:-1,
-                            yoyo:true,
-                            ease:'EaseInOut',
-                        });
-
-                        screen.input.once('pointerdown', function(){
-                            screen.scene.transition({target:'round', duration:500});
-                        });
-                    },
-                });
-            }
-            update(){
-
-            }
-        }
-
         class Round extends Phaser.Scene {
 
             constructor(){
-                super('round');
+                super();
             }
             preload(){
                 this.load.image('player-default', 'assets/player3/test-default.png');
@@ -1098,36 +988,9 @@
             }
 
             gameover(){
-                while(true){
-                    const name = window.prompt("이름을 입력하세요(5글자이내 영어,숫자,특수문자)");
-                    if(name == undefined) break;
-                    if(/^[A-Za-z0-9-_!@#$%\^*\(\)\+\=&\s,\.]{1,5}$/.test(name)){
-                        const result = window.rankDB.push({name:name, score:this.score.value});
-                        window.currentData = result.key;
-                        break;
-                    }
-                }
-
-                const {x, y, width, height} = this.cameras.main;
-                const cx = x + width / 2;
-                const cy = y + height / 2;
-                const titleFontSize = Math.min(100, width / 10 * 1.5);
-                const detailFontSize = Math.min(40, width / 20 * 1.5);
-                const title = this.add.text(cx, height * 1 / 6, 'GAME OVER', {fontFamily:'Luckiest Guy', fill:'#FFF'})
-                                            .setFontSize(titleFontSize).setDepth(99999).setOrigin(0.5);
-                const rank = this.add.text(cx, height * 3 / 6, window.rank.str, {fontFamily:'Azeret Mono', fill:'#FFF'})
-                                            .setFontSize(detailFontSize).setDepth(99999).setOrigin(0.5);
-                console.log(rank);
-                const detail = this.add.text(cx, height * 5 / 6, 'Click to restart', {fontFamily:'Luckiest Guy', fill:"#ccc"})
-                                            .setFontSize(detailFontSize).setOrigin(0.5).setDepth(99999);
-                this.tweens.add({
-                    targets:detail,
-                    alpha:0,
-                    duration:1000,
-                    repeat:-1,
-                    yoyo:true,
-                    ease:'EaseInOut',
-                });                            
+                const screenCenterX = this.cameras.main.x + this.cameras.main.width / 2; 
+                const screenCenterY = this.cameras.main.y + this.cameras.main.height / 2;
+                this.ending = this.add.text(screenCenterX, screenCenterY, 'GAME OVER\n\nclick to restart', {fontSize:'50px', fill:'#FFF', align:'center'}).setDepth(99999).setOrigin(0.5);
 
                 setTimeout(()=>{
                     this.input.once('pointerdown', ()=>{
@@ -1175,11 +1038,12 @@
                     //debug: true,
                 }
             },
-            scene: [Loading, Round]
+            scene: [Round]
         };
 
         const game = new Phaser.Game(config);
     </script>
 
+    
 </body>
 </html>
