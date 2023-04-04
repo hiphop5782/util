@@ -64,11 +64,11 @@
             <div class="percent" :style="{width:datePercent+'%'}"></div>
         </div>
 
-        <div class="row schedule-item mb-20 float-container" v-for="(s, i) in schedules" :key="i" :style="getStyle(s)">
-            <input type="checkbox" class="me-10 float-left" v-model="s.clear">
-            <span class="float-left">{{s.name}}</span>
-            <span class="float-left ms-10">({{s.time}})</span>
-            <span class="float-right">{{calculate(s.time)}}</span>
+        <div class="row schedule-item mb-20 flex-box" v-for="(s, i) in schedules" :key="i" :style="getStyle(s)">
+            <input type="checkbox" class="me-10" v-model="s.clear">
+            <span class="me-10">{{s.name}}</span>
+            <span class="ms-10">({{s.time}})</span>
+            <span class="ms-auto">{{calculate(s.time)}}</span>
         </div>
 
         <div class="row mt-50">
