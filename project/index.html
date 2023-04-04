@@ -46,7 +46,7 @@
     <!-- HTML 화면 -->
     <div class="container-700 mt-50 mb-50" id="app">
         <div class="row center">
-            <h1>{{title}}</h1>
+            <h1>{{project.title}}</h1>
         </div>
 
         <div class="row center">
@@ -54,10 +54,13 @@
         </div>
 
         <div class="row center">
-            {{period.begin}} ~ {{period.end}} ({{period.actual}} / {{period.total}}일, {{datePercent}}%)
+            {{project.period.begin}} ~ {{project.period.end}} 
+            ({{project.period.actual}} 
+            / {{project.period.total}}일, 
+            {{datePercent}}%)
         </div>
 
-        <div class="row progressbar">
+        <div class="row progressbar mb-40">
             <div class="percent" :style="{width:datePercent+'%'}"></div>
         </div>
 
@@ -68,12 +71,9 @@
             <span class="float-right">{{calculate(s.time)}}</span>
         </div>
 
-        <div class="row">
+        <div class="row mt-50">
             <ul class="notice">
-                <li>라운지 이용 자유롭게 하시면 되고 정리 잘 해주세요</li>
-                <li>쉬는시간은 별도의 공지를 하지 않으니 가급적 준수해주시기 바랍니다</li>
-                <li>프로젝트 관련된 질문은 언제든지 환영합니다</li>
-                <li>Github 관련 이슈는 빠른 질문으로 해결하시기 바랍니다</li>
+                <li class="mb-10" v-for="(notice, index) in notices" :key="index">{{notice}}</li>
             </ul>
         </div>
     </div>

@@ -1,46 +1,25 @@
 Vue.createApp({
     data(){
         return {
-            title:"세미 프로젝트",
-            period:{
-                begin:"2022-10-19",
-                end:"2022-11-01",
-                total:0,
-                actual:0,
+            project:{
+                title:"",
+                period:{
+                    begin:"2001-01-01",
+                    end:"2001-01-01",
+                    total:0,
+                    actual:0,
+                }
             },
-            schedules:[
-                {name:"출근", time:"09:30", clear:false},
-                {name:"업무 목표 작성", time:"10:00", clear:false},
-                {name:"점심 시간", time:"12:12", clear:false},
-                {name:"오후 업무 시작", time:"13:30", clear:false},
-                {name:"업무 마감 작성", time:"18:00", clear:false},
-                {name:"퇴근", time:"18:20", clear:false},
-            ],
+            schedules:[],
             now:moment(),
             styles:{
                 clear:{"color":"gray"},
                 almost:{"color":"red"},
                 remain:{"color":"black"}
             },
-            solarHolidays : [
-                {date:"01-01", name:"신정", replace:false},
-                {date:"03-01", name:"삼일절", replace:true},
-                {date:"05-05", name:"어린이날", replace:true},
-                {date:"06-06", name:"현충일", replace:false},
-                {date:"08-15", name:"광복절", replace:true},
-                {date:"10-03", name:"개천절", replace:true},
-                {date:"10-09", name:"한글날", replace:true},
-                {date:"12-25", name:"크리스마스", replace:false},
-            ],
-            lunarHolidays : [
-                {date:"12-31", name:"구정", replace:false},
-                {date:"01-01", name:"구정", replace:true},
-                {date:"01-02", name:"구정", replace:false},
-                {date:"04-08", name:"석가탄신일", replace:false},
-                {date:"08-14", name:"추석", replace:false},
-                {date:"08-15", name:"추석", replace:true},
-                {date:"08-16", name:"추석", replace:false},
-            ],                
+            solarHolidays : [],
+            lunarHolidays : [],
+            notices:[],                
             converter:new LunarSolarConverter(),
         };
     },
@@ -49,8 +28,8 @@ Vue.createApp({
             return this.now.format("YYYY-MM-DD dddd HH:mm:ss");
         },
         datePercent(){
-            if(this.period.total == 0) return 0.0;
-            const percent = this.period.actual / this.period.total * 100;
+            if(this.project.period.total == 0) return 0.0;
+            const percent = this.project.period.actual / this.project.period.total * 100;
             return percent.toFixed(1);
         }
     },
@@ -85,9 +64,10 @@ Vue.createApp({
             }
         },
         calculateWorkingDay(){
-            this.period.total = 0;
-            const begin = moment(this.period.begin, 'YYYY-MM-DD');
-            const end = moment(this.period.end, 'YYYY-MM-DD');
+            this.project.period.total = 0;
+
+            const begin = moment(this.project.period.begin, 'YYYY-MM-DD');
+            const end = moment(this.project.period.end, 'YYYY-MM-DD');
 
             let diff = end.diff(begin, 'days') + 1;
             let total = 0;
@@ -149,14 +129,35 @@ Vue.createApp({
                 d.add(1, 'day');
             }
 
-            this.period.total = total;
-            this.period.actual = actual;
-        }
+            this.project.period.total = total;
+            this.project.period.actual = actual;
+        },
+        async loadProject() {
+            //프로젝트 정보
+            this.project = await fetch("./json/project.json")
+                                .then(response=>response.json());
+
+            //일정 정보
+            this.schedules = await fetch("./json/schedule.json")
+                                .then(response=>response.json());
+
+            //휴일 정보
+            const holidayJson = await fetch("./json/holiday.json")
+                                .then(response=>response.json());
+            this.solarHolidays = holidayJson.solarHolidays;
+            this.lunarHolidays = holidayJson.lunarHolidays;
+
+            //공지사항 목록
+            this.notices = await fetch("./json/notice.json")
+                                .then(response=>response.json());
+
+            this.calculateWorkingDay();
+        },
     },
     created(){
         this.now = moment();
-        this.calculateWorkingDay();
-
+        this.loadProject();
+        
         setInterval(()=>{
             this.now = moment();
 

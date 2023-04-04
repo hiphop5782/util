@@ -1,0 +1,22 @@
+{
+    "solarHolidays" : [
+        {"date":"01-01", "name":"신정", "replace":false},
+        {"date":"03-01", "name":"삼일절", "replace":true},
+        {"date":"04-04", "name":"평가일", "replace":false},
+        {"date":"05-05", "name":"어린이날", "replace":true},
+        {"date":"06-06", "name":"현충일", "replace":false},
+        {"date":"08-15", "name":"광복절", "replace":true},
+        {"date":"10-03", "name":"개천절", "replace":true},
+        {"date":"10-09", "name":"한글날", "replace":true},
+        {"date":"12-25", "name":"크리스마스", "replace":false}
+    ],
+    "lunarHolidays" : [
+        {"date":"12-31", "name":"구정", "replace":false},
+        {"date":"01-01", "name":"구정", "replace":true},
+        {"date":"01-02", "name":"구정", "replace":false},
+        {"date":"04-08", "name":"석가탄신일", "replace":false},
+        {"date":"08-14", "name":"추석", "replace":false},
+        {"date":"08-15", "name":"추석", "replace":true},
+        {"date":"08-16", "name":"추석", "replace":false}
+    ]
+}
