@@ -1,0 +1,88 @@
+@charset "UTF-8";
+
+/*
+    다단 레이아웃
+    - 2단, 3단, 그 이상의 화면 배치를 가로로 하기 위한 방법
+    - float, flex, grid와 같은 여러 방식들이 존재
+
+    float 배치
+    - 기본 배치가 아닌 공중 배치 개념
+    - left와 right 두 가지 방식이 존재
+    - 바닥이 아닌 공중에 배치하기 때문에 뒤쪽 영역을 침범하는 문제가 있음
+    - 이 문제를 해결하지 못하면 사용이 불가능함
+    - clear 속성을 가진 영역이 반드시 float 사용 후에 배치해야 한다
+    - ::after 영역을 가상 선택자로 선택하여 생성한 뒤 clear 적용
+*/
+.float-box::after {
+    content:"";
+    display: block;
+    clear: both;
+}
+.float-box > .float-left {
+    float: left;
+}
+.float-box > .float-right {
+    float: right;
+}
+
+/*
+    flexbox 레이아웃
+    - 영역에 display:flex 또는 display:inline-flex라고 설정하여 구현
+    - 영역 차원에서 설정하는 옵션이 많음
+        - flex-direction : 영역 내부 컨텐츠 배치 방향
+        - flex-wrap : 영역 내부 컨텐츠 줄바꿈
+        - justify-content : 영역 내부 컨텐츠 가로 정렬
+        - align-items : 영역 내부 컨텐츠 세로 정렬
+    - 개별 항목에는 배치 비율을 지정할 수 있다
+        - flex-grow : 남는 공간에 대한 할당 비율
+
+    display:flex와 display:inline-flex의 차이
+    - 내부 항목에는 차이가 없음
+    - 해당 영역이 display:block이냐 display:inline이냐의 차이가 있음
+*/
+.flex-box {
+    display: flex;
+}
+.inline-flex-box {
+    display: inline-flex;
+}
+
+.flex-box.flex-auto-width > *,
+.inline-flex-box.flex-auto-width > * {
+    flex-grow: 1;
+}
+.flex-box.flex-vertical,
+.inline-flex-box.flex-vertical {
+    flex-direction: column;
+}        
+.flex-box.align-center,
+.inline- flex-box.align-center {
+    justify-content: center;
+    align-items: center;
+}
+
+/*
+    홈페이지 메인 레이아웃
+*/
+
+/* main을 제어해서 홈페이지 전체 폭과 정렬을 제어 */
+main {
+    width:1000px;
+    margin:0 auto;
+}
+/* 내부 영역에 기본 여백을 부여 */
+header, footer {
+    padding: 1em;
+}
+/* section은 다단 레이아웃이 가능하도록 배치 */
+section {
+    display: flex;
+}
+aside {
+    width: 150px;
+}
+article {
+    flex-grow: 1;
+    padding: 1em;
+    min-height: 450px;
+}
