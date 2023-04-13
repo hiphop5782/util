@@ -6,8 +6,8 @@ Vue.createApp({
                 date:"2023-04-04",
             },
             subList:[
-                {no:1, type:"서술형", count:4, begin:"09:30", end:"11:30", progress:0, remain:0},
-                {no:2, type:"포트폴리오", count:1, begin:"09:30", end:"11:30", progress:0, remain:0},
+                {no:1, type:"서술형", count:3, begin:"09:30", end:"11:30", progress:0, remain:0},
+                {no:2, type:"평가자 체크리스트", count:1, begin:"09:30", end:"11:30", progress:0, remain:0},
             ],
             noticeList:[
                 "답안이 공백일 경우 0점 처리됩니다",
