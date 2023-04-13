@@ -2,8 +2,8 @@ Vue.createApp({
     data(){
         return {
             subject:{
-                title:"UI 디자인",
-                date:"2023-04-04",
+                title:"인터페이스 구현",
+                date:"2023-04-13",
             },
             subList:[
                 {no:1, type:"서술형", count:3, begin:"09:30", end:"11:30", progress:0, remain:0},
