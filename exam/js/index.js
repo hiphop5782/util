@@ -33,7 +33,7 @@ Vue.createApp({
     },
     methods:{
         strFormat(str) {
-            return moment(str, "yyyy-MM-dd").format("y년 M월 d일 dddd");
+            return moment(str, "YYYY-MM-DD").format("Y년 M월 D일 dddd");
         },
         timeFormat(value) {
             if(value < 0) return "평가 종료";
