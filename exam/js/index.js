@@ -2,11 +2,11 @@ Vue.createApp({
     data(){
         return {
             subject:{
-                title:"통합 구현",
-                date:"2023-04-24",
+                title:"애플리케이션 테스트 관리",
+                date:"2023-05-15",
             },
             subList:[
-                {no:1, type:"서술형", count:3, begin:"09:30", end:"11:30", progress:0, remain:0},
+                {no:1, type:"문제해결 시나리오", count:1, begin:"09:30", end:"11:30", progress:0, remain:0},
                 {no:2, type:"평가자 체크리스트", count:1, begin:"09:30", end:"11:30", progress:0, remain:0},
             ],
             noticeList:[
