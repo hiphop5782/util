@@ -2,12 +2,12 @@ Vue.createApp({
     data(){
         return {
             subject:{
-                title:"애플리케이션 테스트 관리",
-                date:"2023-05-15",
+                title:"애플리케이션 배포",
+                date:"2023-05-22",
             },
             subList:[
-                {no:1, type:"문제해결 시나리오", count:1, begin:"09:30", end:"11:30", progress:0, remain:0},
-                {no:2, type:"평가자 체크리스트", count:1, begin:"09:30", end:"11:30", progress:0, remain:0},
+                {no:1, type:"서술형 평가", count:1, begin:"09:30", end:"11:30", progress:0, remain:0},
+                {no:2, type:"문제해결 시나리오", count:1, begin:"09:30", end:"11:30", progress:0, remain:0},
             ],
             noticeList:[
                 "답안이 공백일 경우 0점 처리됩니다",
