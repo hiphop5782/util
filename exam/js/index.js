@@ -6,7 +6,7 @@ Vue.createApp({
                 date:"2023-06-28",
             },
             subList:[
-                {no:1, type:"문제해결 시나리오", count:1, begin:"12:30", end:"13:30", progress:0, remain:0},
+                {no:1, type:"문제해결 시나리오", count:1, begin:"12:40", end:"13:40", progress:0, remain:0},
             ],
             noticeList:[
                 "답안이 공백일 경우 0점 처리됩니다",
