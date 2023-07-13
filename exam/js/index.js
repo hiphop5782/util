@@ -2,11 +2,12 @@ Vue.createApp({
     data(){
         return {
             subject:{
-                title:"프로그래밍 언어 활용",
-                date:"2023-06-28",
+                title:"내부 평가",
+                date:"2023-07-13",
             },
             subList:[
-                {no:1, type:"문제해결 시나리오", count:1, begin:"12:40", end:"13:40", progress:0, remain:0},
+                {no:1, type:"프로그래밍 언어 응용", count:1, begin:"09:30", end:"11:30", progress:0, remain:0},
+                {no:2, type:"네트워크 프로그래밍 구현", count:1, begin:"09:30", end:"11:30", progress:0, remain:0},
             ],
             noticeList:[
                 "답안이 공백일 경우 0점 처리됩니다",
