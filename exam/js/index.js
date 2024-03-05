@@ -3,11 +3,11 @@ Vue.createApp({
         return {
             subject:{
                 title:"내부 평가",
-                date:"2023-07-13",
+                date:"2024-03-05",
             },
             subList:[
-                {no:1, type:"프로그래밍 언어 응용", count:1, begin:"09:30", end:"11:30", progress:0, remain:0},
-                {no:2, type:"네트워크 프로그래밍 구현", count:1, begin:"09:30", end:"11:30", progress:0, remain:0},
+                {no:1, type:"서버 프로그램 구현", count:1, begin:"09:30", end:"11:30", progress:0, remain:0},
+                {no:2, type:"화면 구현", count:1, begin:"09:30", end:"11:30", progress:0, remain:0},
             ],
             noticeList:[
                 "답안이 공백일 경우 0점 처리됩니다",
